@@ -1,4 +1,4 @@
 echo off
-set PATH=C:\Program Files (x86)\mingw-w64\i686-7.1.0-win32-dwarf-rt_v5-rev2\mingw32\bin;D:\Learning\SDL2-devel-2.0.14-mingw\SDL2-2.0.14\i686-w64-mingw32\bin;%PATH%
-REM cd "C:\"
+SET PWD=%CD%
+set PATH=%PWD%\mingw-w64\i686-8.1.0-posix-dwarf-rt_v6-rev0\mingw32\bin;%PWD%\SDL2-2.0.14\i686-w64-mingw32\bin;%PWD%\SDL2_image-2.0.5\i686-w64-mingw32\bin;%PATH%
 "C:\WINDOWS\system32\cmd.exe"

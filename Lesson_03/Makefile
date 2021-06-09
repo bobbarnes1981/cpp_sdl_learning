@@ -5,10 +5,10 @@ OBJS = source.cpp
 CC = g++
 
 #INCLUDE_PATHS specifies the additional include paths we'll need
-INCLUDE_PATHS = -ID:\Learning\SDL2-devel-2.0.14-mingw\SDL2-2.0.14\i686-w64-mingw32\include\SDL2
+INCLUDE_PATHS = -I..\SDL2-2.0.14\i686-w64-mingw32\include\SDL2
 
 #LIBRARY_PATHS specifies the additional library paths we'll need
-LIBRARY_PATHS = -LD:\Learning\SDL2-devel-2.0.14-mingw\SDL2-2.0.14\i686-w64-mingw32\lib
+LIBRARY_PATHS = -L..\SDL2-2.0.14\i686-w64-mingw32\lib
 
 #COMPILER_FLAGS specifies the additional compilation options we're using
 # -w suppresses all warnings
