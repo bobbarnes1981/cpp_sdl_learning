@@ -51,6 +51,10 @@ void generateText();
 
 void renderText(int x, int y, SDL_Texture* texture);
 
+void generateTerm();
+
+void processTerm();
+
 SDL_Texture* loadTexture(std::string path);
 
 SDL_Window* gWindow = NULL;
@@ -81,6 +85,12 @@ SDL_Texture* textBoot1Texture = NULL;
 
 SDL_Surface* textBoot2Surface = NULL;
 SDL_Texture* textBoot2Texture = NULL;
+
+char termPrompt = '>';
+int termLines = 0;
+std::string termBuffer = "";
+SDL_Surface* textTermBufferSurface = NULL;
+SDL_Texture* textTermBufferTexture = NULL;
 
 enum GameState
 {
@@ -195,6 +205,9 @@ void close()
     
     SDL_DestroyTexture(textBoot2Texture);
     SDL_FreeSurface(textBoot2Surface);
+    
+    SDL_DestroyTexture(textTermBufferTexture);
+    SDL_FreeSurface(textTermBufferSurface);
     
     TTF_CloseFont(gFont);
     gFont = NULL;
@@ -321,6 +334,10 @@ void drawIcons()
                 {
                     case 0:
                         currentState = GS_TERM;
+                        termBuffer.clear();
+                        termLines = 0;
+                        termBuffer.push_back(termPrompt);
+                        generateTerm();
                         popupTerm = currentTicks;
                         break;
                     case 3:
@@ -395,6 +412,8 @@ void drawTermPopup()
         SDL_Rect fillRect = { 60+5, 60+30+5, 300-(5*2), 200-30-(5*2) };
         SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderFillRect(gRenderer, &fillRect);
+        
+        renderText(60+5, 60+30+5, textTermBufferTexture);
     }
 }
 
@@ -475,6 +494,73 @@ void handleKey(SDL_Keycode keycode)
                 currentState = GS_RUN;
             }
             break;
+        default:
+            if (currentState == GS_TERM)
+            {
+                //printf("%d\n", keycode);
+                
+                switch(keycode)
+                {
+                    case '\r':
+                        termBuffer.push_back(keycode);
+                        processTerm();
+                        termBuffer.push_back(termPrompt);
+                        termLines += 1;
+                        break;
+                    case '\b':
+                        if (termBuffer.length() == 2 || termBuffer.length() > 2 && termBuffer[termBuffer.length()-2] != '\r')
+                        {
+                            termBuffer.pop_back();
+                        }
+                        break;
+                    default:
+                        termBuffer.push_back(keycode);
+                        break;
+                }
+                
+                while (termLines > 8)
+                {
+                    std::size_t loc = termBuffer.find('\r');
+                    termBuffer = termBuffer.substr(loc+1);
+                    termLines-=1;
+                }
+                generateTerm();
+            }
+            break;
+    }
+}
+
+void generateTerm()
+{
+    SDL_DestroyTexture(textTermBufferTexture);
+    SDL_FreeSurface(textTermBufferSurface);
+    
+    SDL_Color green = { 0x00, 0xFF, 0x00 };
+    textTermBufferSurface = TTF_RenderText_Blended_Wrapped(gFont, termBuffer.c_str(), green, 300-(5*2));
+    textTermBufferTexture = SDL_CreateTextureFromSurface(gRenderer, textTermBufferSurface);
+}
+
+void processTerm()
+{
+    std::size_t loc = termBuffer.rfind('\r', termBuffer.length()-2);
+    std::string command = termBuffer.substr(loc+2, termBuffer.length()-(loc+2+1));
+    if (command.compare("exit") == 0)
+    {
+        currentState = GS_EXIT;
+    }
+    else if (command.compare("quit") == 0)
+    {
+        currentState = GS_RUN;
+    }
+    else if (command.compare("help") == 0)
+    {
+        termBuffer.append(" quit\r");
+        termLines+=1;
+    }
+    else
+    {
+        termBuffer.append("error\r");
+        termLines+=1;
     }
 }
 
