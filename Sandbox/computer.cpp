@@ -13,6 +13,136 @@
 #define ICON_DELAY 125
 #define POPUP_DELAY 250
 
+class Button
+{
+    public:
+        Button();
+        ~Button();
+        bool draw(SDL_Renderer* renderer, int x, int y, int width, int height, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY);
+    private:
+        int x;
+        int y;
+        int w;
+        int h;
+        void renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture);
+};
+
+Button::Button()
+{
+    
+};
+
+Button::~Button()
+{
+    
+};
+
+bool Button::draw(SDL_Renderer* renderer, int x, int y, int width, int height, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY)
+{
+    bool pressed = false;
+    if (mouseDown && mouseX > x && mouseX < x + width && mouseY > y && mouseY < y + height)
+    {
+        pressed = true;
+    }
+    
+    SDL_Rect fillRect = { x, y, width, height };
+    SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
+    SDL_RenderFillRect(renderer, &fillRect);
+    
+    if (pressed)
+    {
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    }
+    SDL_RenderDrawLine(renderer, x, y, x+width, y);
+    SDL_RenderDrawLine(renderer, x, y, x, y+height);
+    if (pressed)
+    {
+        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
+    }
+    else
+    {
+        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
+    }
+    SDL_RenderDrawLine(renderer, x, y+height, x+width, y+height);
+    SDL_RenderDrawLine(renderer, x+width, y, x+width, y+height);
+    
+    renderText(renderer, x+5, y+5, texture);
+    
+    return pressed;
+};
+
+void Button::renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture)
+{
+    int texW = 0;
+    int texH = 0;
+    SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
+    SDL_Rect dstrect = { x, y, texW, texH };
+    SDL_RenderCopy(renderer, texture, NULL, &dstrect);
+}
+
+class Popup
+{
+    public:
+        Popup();
+        ~Popup();
+        bool draw(SDL_Renderer* renderer, int x, int y, int width, int height, SDL_Texture* texture, unsigned int ticks, unsigned int currentTicks);
+    private:
+        void renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture);
+};
+
+Popup::Popup()
+{
+    
+};
+
+Popup::~Popup()
+{
+    
+};
+
+bool Popup::draw(SDL_Renderer* renderer, int x, int y, int width, int height, SDL_Texture* texture, unsigned int ticks, unsigned int currentTicks)
+{
+    SDL_Rect fillRect = { x, y, width, 30 };
+    SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
+    SDL_RenderFillRect(renderer, &fillRect);
+    
+    renderText(renderer, x+5, y+5, texture);
+    
+    if (currentTicks - ticks > POPUP_DELAY)
+    {
+        fillRect = { x, y+30, width, height-30 };
+        SDL_SetRenderDrawColor(renderer, 0x03, 0xFC, 0xA9, 0xFF);
+        SDL_RenderFillRect(renderer, &fillRect);
+        
+        SDL_Rect outlineRect = { x, y, width, height };
+        SDL_SetRenderDrawColor(renderer, 0x03, 0x36, 0x25, 0xFF);
+        SDL_RenderDrawRect(renderer, &outlineRect);
+        
+        return true;
+    }
+    
+    return false;
+};
+
+void Popup::renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture)
+{
+    int texW = 0;
+    int texH = 0;
+    SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
+    SDL_Rect dstrect = { x, y, texW, texH };
+    SDL_RenderCopy(renderer, texture, NULL, &dstrect);
+}
+
+Button buttonOK;
+Button buttonCancel;
+
+Popup popupShutdown;
+Popup popupTerminal;
+
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
 
@@ -35,13 +165,9 @@ void drawDesktop();
 
 void drawIcons();
 
-void drawExitPopup();
+void drawShutdownPopup();
 
 void drawTermPopup();
-
-bool drawPopup(int x, int y, int width, int height, SDL_Texture* texture, unsigned int ticks);
-
-bool drawButton(int x, int y, int width, int height, SDL_Texture* texture);
 
 void handleKey();
 
@@ -54,6 +180,10 @@ void renderText(int x, int y, SDL_Texture* texture);
 void generateTerm();
 
 void processTerm();
+
+void boot();
+
+unsigned int startTime = 0;
 
 SDL_Texture* loadTexture(std::string path);
 
@@ -69,11 +199,11 @@ SDL_Texture* buttonOKTexture = NULL;
 SDL_Surface* buttonCancelSurface = NULL;
 SDL_Texture* buttonCancelTexture = NULL;
 
-unsigned int popupExit = 0;
-SDL_Surface* textExitSurface = NULL;
-SDL_Texture* textExitTexture = NULL;
+unsigned int popupShutdownOpened = 0;
+SDL_Surface* textShutdownSurface = NULL;
+SDL_Texture* textShutdownTexture = NULL;
 
-unsigned int popupTerm = 0;
+unsigned int popupTerminalOpened = 0;
 SDL_Surface* textTermSurface = NULL;
 SDL_Texture* textTermTexture = NULL;
 
@@ -97,7 +227,7 @@ enum GameState
     GS_START,
     GS_DESKTOP,
     GS_RUN,
-    GS_EXIT,
+    GS_SHUTDOWN,
     GS_TERM,
     GS_QUIT
 };
@@ -191,8 +321,8 @@ void close()
     SDL_DestroyTexture(buttonCancelTexture);
     SDL_FreeSurface(buttonCancelSurface);
     
-    SDL_DestroyTexture(textExitTexture);
-    SDL_FreeSurface(textExitSurface);
+    SDL_DestroyTexture(textShutdownTexture);
+    SDL_FreeSurface(textShutdownSurface);
     
     SDL_DestroyTexture(textTermTexture);
     SDL_FreeSurface(textTermSurface);
@@ -248,12 +378,12 @@ void drawDesktop()
     char alpha = 0xFF;
     if (currentState == GS_START)
     {
-        if (currentTicks < STARTUP_FLASH + STARTUP_BLANK)
+        if (currentTicks - startTime < STARTUP_FLASH + STARTUP_BLANK)
         {
             alpha = 0x00;
             
             int numBoot = 3;
-            int bootTime = currentTicks-(STARTUP_FLASH);
+            int bootTime = currentTicks-startTime-(STARTUP_FLASH);
             int bootToDraw =  bootTime / (STARTUP_BLANK / numBoot);
             switch (bootToDraw)
             {
@@ -266,7 +396,7 @@ void drawDesktop()
                     break;
             }
             
-            if (currentTicks < STARTUP_FLASH)
+            if (currentTicks-startTime < STARTUP_FLASH)
             {
                 SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
@@ -275,9 +405,9 @@ void drawDesktop()
         }
         else
         {
-            alpha = (256.0 / STARTUP_FADE) * (currentTicks - (STARTUP_FLASH + STARTUP_BLANK));
+            alpha = (256.0 / STARTUP_FADE) * (currentTicks - startTime - (STARTUP_FLASH + STARTUP_BLANK));
     
-            if (currentTicks > STARTUP_FADE + STARTUP_FLASH + STARTUP_BLANK)
+            if (currentTicks - startTime > STARTUP_FADE + STARTUP_FLASH + STARTUP_BLANK)
             {
                 //printf("desktop\n");
                 currentState = GS_DESKTOP;
@@ -338,11 +468,11 @@ void drawIcons()
                         termLines = 0;
                         termBuffer.push_back(termPrompt);
                         generateTerm();
-                        popupTerm = currentTicks;
+                        popupTerminalOpened = currentTicks;
                         break;
                     case 3:
-                        currentState = GS_EXIT;
-                        popupExit = currentTicks;
+                        currentState = GS_SHUTDOWN;
+                        popupShutdownOpened = currentTicks;
                         break;
                 }
             }
@@ -368,7 +498,7 @@ void drawIcons()
         }
         if (i == 3)
         {
-            renderText(x, y+h+5, textExitTexture);
+            renderText(x, y+h+5, textShutdownTexture);
         }
     }
 }
@@ -382,101 +512,47 @@ void renderText(int x, int y, SDL_Texture* texture)
     SDL_RenderCopy(gRenderer, texture, NULL, &dstrect);
 }
 
-bool buttonOK = false;
-bool buttonCancel = false;
+bool buttonOKClicked = false;
+bool buttonCancelClicked = false;
 
-void drawExitPopup()
+void drawShutdownPopup()
 {
-    if (drawPopup(60, 60, 150, 100, textExitTexture, popupExit))
+    int w = 150;
+    int h = 100;
+    int x = (SCREEN_WIDTH/2)-w/2;
+    int y = (SCREEN_HEIGHT/2)-h/2;
+    if (popupShutdown.draw(gRenderer, x, y, w, h, textShutdownTexture, popupShutdownOpened, currentTicks))
     {
-        bool newState = drawButton(70, 120, 60, 30, buttonOKTexture);
-        if (newState == false && buttonOK == true)
+        bool newState = buttonOK.draw(gRenderer, x + 10, y + 60, 60, 30, buttonOKTexture, mouseDown, mouseX, mouseY);
+        if (newState == false && buttonOKClicked == true)
         {
             currentState = GS_QUIT;
         }
-        buttonOK = newState;
+        buttonOKClicked = newState;
         
-        newState = drawButton(140, 120, 60, 30, buttonCancelTexture);
-        if (newState == false && buttonCancel == true)
+        newState = buttonCancel.draw(gRenderer, x + 80, y + 60, 60, 30, buttonCancelTexture, mouseDown, mouseX, mouseY);
+        if (newState == false && buttonCancelClicked == true)
         {
             currentState = GS_RUN;
         }
-        buttonCancel = newState;
+        buttonCancelClicked = newState;
     }
 }
 
 void drawTermPopup()
 {
-    if (drawPopup(60, 60, 300, 200, textTermTexture, popupTerm))
+    int w = 300;
+    int h = 200;
+    int x = (SCREEN_WIDTH/2)-w/2;
+    int y = (SCREEN_HEIGHT/2)-h/2;
+    if (popupTerminal.draw(gRenderer, x, y, w, h, textTermTexture, popupTerminalOpened, currentTicks))
     {
-        SDL_Rect fillRect = { 60+5, 60+30+5, 300-(5*2), 200-30-(5*2) };
+        SDL_Rect fillRect = { x+5, y+30+5, w-(5*2), h-30-(5*2) };
         SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderFillRect(gRenderer, &fillRect);
         
-        renderText(60+5, 60+30+5, textTermBufferTexture);
+        renderText(x+5, y+30+5, textTermBufferTexture);
     }
-}
-
-bool drawPopup(int x, int y, int width, int height, SDL_Texture* texture, unsigned int ticks)
-{
-    SDL_Rect fillRect = { x, y, width, 30 };
-    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, 0xFF);
-    SDL_RenderFillRect(gRenderer, &fillRect);
-    
-    renderText(x+5, y+5, texture);
-    
-    if (currentTicks - ticks > POPUP_DELAY)
-    {
-        fillRect = { x, y+30, width, height-30 };
-        SDL_SetRenderDrawColor(gRenderer, 0x03, 0xFC, 0xA9, 0xFF);
-        SDL_RenderFillRect(gRenderer, &fillRect);
-        
-        SDL_Rect outlineRect = { x, y, width, height };
-        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, 0xFF);
-        SDL_RenderDrawRect(gRenderer, &outlineRect);
-        
-        return true;
-    }
-    
-    return false;
-}
-
-bool drawButton(int x, int y, int width, int height, SDL_Texture* texture)
-{
-    bool pressed = false;
-    if (mouseDown && mouseX > x && mouseX < x + width && mouseY > y && mouseY < y + height)
-    {
-        pressed = true;
-    }
-    
-    SDL_Rect fillRect = { x, y, width, height };
-    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, 0xFF);
-    SDL_RenderFillRect(gRenderer, &fillRect);
-    
-    if (pressed)
-    {
-        SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    }
-    SDL_RenderDrawLine(gRenderer, x, y, x+width, y);
-    SDL_RenderDrawLine(gRenderer, x, y, x, y+height);
-    if (pressed)
-    {
-        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
-    }
-    SDL_RenderDrawLine(gRenderer, x, y+height, x+width, y+height);
-    SDL_RenderDrawLine(gRenderer, x+width, y, x+width, y+height);
-    
-    renderText(x+5, y+5, texture);
-    
-    return pressed;
 }
 
 void handleKey(SDL_Keycode keycode)
@@ -487,9 +563,9 @@ void handleKey(SDL_Keycode keycode)
         case SDLK_ESCAPE:
             if (currentState == GS_RUN)
             {
-                currentState = GS_EXIT;
+                currentState = GS_SHUTDOWN;
             }
-            else if (currentState == GS_EXIT || currentState == GS_TERM)
+            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM)
             {
                 currentState = GS_RUN;
             }
@@ -544,11 +620,7 @@ void processTerm()
 {
     std::size_t loc = termBuffer.rfind('\r', termBuffer.length()-2);
     std::string command = termBuffer.substr(loc+2, termBuffer.length()-(loc+2+1));
-    if (command.compare("exit") == 0)
-    {
-        currentState = GS_EXIT;
-    }
-    else if (command.compare("quit") == 0)
+    if (command.compare("quit") == 0)
     {
         currentState = GS_RUN;
     }
@@ -556,6 +628,10 @@ void processTerm()
     {
         termBuffer.append(" quit\r");
         termLines+=1;
+    }
+    else if (command.compare("reboot") == 0)
+    {
+        boot();
     }
     else
     {
@@ -601,8 +677,8 @@ void generateText()
     buttonCancelSurface = TTF_RenderText_Solid(gFont, "Cancel", black);
     buttonCancelTexture = SDL_CreateTextureFromSurface(gRenderer, buttonCancelSurface);
     
-    textExitSurface = TTF_RenderText_Solid(gFont, "Exit", black);
-    textExitTexture = SDL_CreateTextureFromSurface(gRenderer, textExitSurface);
+    textShutdownSurface = TTF_RenderText_Solid(gFont, "Shutdown", black);
+    textShutdownTexture = SDL_CreateTextureFromSurface(gRenderer, textShutdownSurface);
     
     textTermSurface = TTF_RenderText_Solid(gFont, "Term", black);
     textTermTexture = SDL_CreateTextureFromSurface(gRenderer, textTermSurface);
@@ -614,6 +690,12 @@ void generateText()
     textBoot1Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot1Surface);
     textBoot2Surface = TTF_RenderText_Solid(gFont, "Startup...", grey);
     textBoot2Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot2Surface);
+}
+
+void boot()
+{
+    startTime = SDL_GetTicks();
+    currentState = GS_START;
 }
 
 int main(int argc, char* args[])
@@ -633,6 +715,8 @@ int main(int argc, char* args[])
             SDL_Event e;
             
             generateText();
+            
+            boot();
             
             while(currentState != GS_QUIT)
             {
@@ -666,9 +750,9 @@ int main(int argc, char* args[])
                     drawIcons();
                 }
                 
-                if (currentState == GS_EXIT)
+                if (currentState == GS_SHUTDOWN)
                 {
-                    drawExitPopup();
+                    drawShutdownPopup();
                 }
                 
                 if (currentState == GS_TERM)
