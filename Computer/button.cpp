@@ -13,7 +13,7 @@ Button::~Button()
     
 };
 
-bool Button::draw(SDL_Renderer* renderer, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY)
+bool Button::draw(SDL_Renderer* renderer, bool mouseDown, int mouseX, int mouseY)
 {
     bool pressed = false;
     if (mouseDown && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
@@ -45,8 +45,6 @@ bool Button::draw(SDL_Renderer* renderer, SDL_Texture* texture, bool mouseDown, 
     }
     SDL_RenderDrawLine(renderer, x, y+h, x+w, y+h);
     SDL_RenderDrawLine(renderer, x+w, y, x+w, y+h);
-    
-    renderText(renderer, x+5, y+5, texture);
     
     return pressed;
 };

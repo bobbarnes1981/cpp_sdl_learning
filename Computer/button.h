@@ -12,7 +12,7 @@ class Button : Entity
         int h;
         Button();
         ~Button();
-        bool draw(SDL_Renderer* renderer, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY);
+        bool draw(SDL_Renderer* renderer, bool mouseDown, int mouseX, int mouseY);
     private:
 };
 

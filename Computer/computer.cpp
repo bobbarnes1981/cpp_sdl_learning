@@ -28,9 +28,10 @@ const int SCREEN_HEIGHT = 480;
 
 int mouseX = -1;
 int mouseY = -1;
-bool mouseDown = false;
-bool mouseDouble = false;
-unsigned int mouseClick = 0;
+bool mouseDown1 = false;
+unsigned int mouseClick1 = -1;
+bool mouseDown3 = false;
+unsigned int mouseClick3 = -1;
 
 bool init();
 
@@ -50,7 +51,7 @@ void drawTermPopup();
 
 void handleKey();
 
-void handleMouse(unsigned int type);
+void handleMouse(unsigned int type, int button);
 
 void generateText();
 
@@ -66,6 +67,8 @@ void bootBufferGenerate();
 
 void boot();
 
+void drawContextMenu();
+
 unsigned int startTime = 0;
 
 bool alphaOverride = false;
@@ -79,11 +82,8 @@ SDL_Renderer* gRenderer = NULL;
 
 TTF_Font* gFont = NULL;
 
-SDL_Surface* buttonOKSurface = NULL;
-SDL_Texture* buttonOKTexture = NULL;
-
-SDL_Surface* buttonCancelSurface = NULL;
-SDL_Texture* buttonCancelTexture = NULL;
+Text textOK;
+Text textCancel;
 
 Text textShutdown;
 Text textTerminal;
@@ -181,12 +181,6 @@ void close()
     gRenderer = NULL;
     SDL_DestroyWindow(gWindow);
     gWindow = NULL;
-    
-    SDL_DestroyTexture(buttonOKTexture);
-    SDL_FreeSurface(buttonOKSurface);
-    
-    SDL_DestroyTexture(buttonCancelTexture);
-    SDL_FreeSurface(buttonCancelSurface);
     
     TTF_CloseFont(gFont);
     gFont = NULL;
@@ -316,7 +310,7 @@ void drawIcons()
         
         if (currentState == GS_RUN)
         {
-            if (mouseDown && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
+            if (mouseDown1 && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
             {
                 iconSelected = i;
                 
@@ -350,7 +344,7 @@ void drawIcons()
         if (iconSelected == i)
         {
             SDL_RenderFillRect(gRenderer, &outlineRect);
-            if (currentTicks - mouseClick > ICON_DELAY)
+            if (currentTicks - mouseClick1 > ICON_DELAY)
             {
                 iconSelected = -1;
             }
@@ -394,14 +388,20 @@ void drawShutdownPopup()
 {
     if (popupShutdown.draw(gRenderer, currentTicks))
     {
-        bool newState = buttonOK.draw(gRenderer, buttonOKTexture, mouseDown, mouseX, mouseY);
+        bool newState = buttonOK.draw(gRenderer, mouseDown1, mouseX, mouseY);
+        textOK.x = buttonOK.x+5;
+        textOK.y = buttonOK.y+5;
+        textOK.draw(gRenderer);
         if (newState == false && buttonOKClicked == true)
         {
             currentState = GS_QUIT;
         }
         buttonOKClicked = newState;
         
-        newState = buttonCancel.draw(gRenderer, buttonCancelTexture, mouseDown, mouseX, mouseY);
+        newState = buttonCancel.draw(gRenderer, mouseDown1, mouseX, mouseY);
+        textCancel.x = buttonCancel.x+5;
+        textCancel.y = buttonCancel.y+5;
+        textCancel.draw(gRenderer);
         if (newState == false && buttonCancelClicked == true)
         {
             currentState = GS_RUN;
@@ -412,6 +412,43 @@ void drawShutdownPopup()
     textShutdown.x = popupShutdown.x+5;
     textShutdown.y = popupShutdown.y+5;
     textShutdown.draw(gRenderer);
+}
+
+int contextX;
+int contextY;
+
+void drawContextMenu()
+{
+    int timeToShow = 500;
+    int numItems = 4;
+    int itemWidth = 80;
+    int itemHeight = 30;
+    
+    SDL_Rect fillRect = { contextX, contextY, 15, itemHeight*numItems };
+    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, 0xFF);
+    SDL_RenderFillRect(gRenderer, &fillRect);
+    
+    int itemTime = currentTicks - mouseClick3;
+    int itemsToDraw =  itemTime / (timeToShow / numItems);
+    if (itemsToDraw > numItems)
+    {
+        itemsToDraw = numItems;
+    }
+    int mX, mY;
+    SDL_GetMouseState(&mX, &mY);
+    for (int i = 0; i < itemsToDraw; i++)
+    {
+        int x = contextX + 15;
+        int y = contextY + (i*itemHeight);
+        SDL_Rect rect = { x, y, itemWidth, itemHeight+1 };
+        if (mX > x && mX < x + itemWidth && mY > y && mY < y + itemHeight)
+        {
+            SDL_SetRenderDrawColor(gRenderer, 0x03, 0x46, 0x25, 0xFF);
+            SDL_RenderFillRect(gRenderer, &rect);
+        }
+        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, 0xFF);
+        SDL_RenderDrawRect(gRenderer, &rect);
+    }
 }
 
 void drawBootBuffer()
@@ -473,7 +510,7 @@ void handleKey(SDL_Keycode keycode)
             {
                 currentState = GS_SHUTDOWN;
             }
-            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM || currentState == GS_HELP || currentState == GS_MANAGE)
+            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM || currentState == GS_HELP || currentState == GS_MANAGE || currentState == GS_CONTEXT)
             {
                 currentState = GS_RUN;
             }
@@ -574,7 +611,7 @@ void terminalBufferProcess()
     }
 }
 
-void handleMouse(unsigned int type)
+void handleMouse(unsigned int type, int button)
 {
     int x, y;
     SDL_GetMouseState(&x, &y);
@@ -584,19 +621,31 @@ void handleMouse(unsigned int type)
     switch(type)
     {
         case SDL_MOUSEBUTTONDOWN:
-            mouseDown = true;
-            if (currentTicks - mouseClick < DOUBLE_CLICK)
+            //printf("%d\n", button);
+            if (button == 1)
             {
-                //printf("double click\n");
-                mouseDouble = true;
+                mouseDown1 = true;
+                mouseClick1 = currentTicks;
             }
-            mouseClick = currentTicks;
-            //printf("down\n");
+            if (button == 3)
+            {
+                mouseDown3 = true;
+                mouseClick3 = currentTicks;
+                
+                currentState = GS_CONTEXT;
+                contextX = mouseX;
+                contextY = mouseY;
+            }
             break;
         case SDL_MOUSEBUTTONUP:
-            mouseDown = false;
-            mouseDouble = false;
-            //printf("up\n");
+            if (button == 1)
+            {
+                mouseDown1 = false;
+            }
+            if (button == 3)
+            {
+                mouseDown3 = false;
+            }
             break;
     }
 }
@@ -605,11 +654,9 @@ void generateText()
 {
     SDL_Color black = { 0x00, 0x00, 0x00 };
     
-    buttonOKSurface = TTF_RenderText_Solid(gFont, "OK", black);
-    buttonOKTexture = SDL_CreateTextureFromSurface(gRenderer, buttonOKSurface);
+    textOK.generate(gRenderer, gFont, black, "OK");
     
-    buttonCancelSurface = TTF_RenderText_Solid(gFont, "Cancel", black);
-    buttonCancelTexture = SDL_CreateTextureFromSurface(gRenderer, buttonCancelSurface);
+    textCancel.generate(gRenderer, gFont, black, "Cancel");
     
     textShutdown.generate(gRenderer, gFont, black, "Shutdown");
     
@@ -622,7 +669,6 @@ void generateText()
 
 void boot()
 {
-    bootBufferUpdate("Rebooting");
     bootBuffer.clear();
     bootLines = 0;
     startTime = currentTicks; // SDL_GetTicks();
@@ -700,15 +746,17 @@ int main(int argc, char* args[])
                             handleKey(e.key.keysym.sym);
                             break;
                         case SDL_MOUSEBUTTONDOWN:
-                            handleMouse(e.type);
+                            handleMouse(e.type, e.button.button);
                             break;
                         case SDL_MOUSEBUTTONUP:
-                            handleMouse(e.type);
+                            handleMouse(e.type, e.button.button);
                             break;
                     }
                 }
                 
                 drawDesktop();
+                
+                //printf("%d\n", currentState);
                 
                 if (currentState != GS_START)
                 {
@@ -733,6 +781,11 @@ int main(int argc, char* args[])
                 if (currentState == GS_MANAGE)
                 {
                     drawManagePopup();
+                }
+                
+                if (currentState == GS_CONTEXT)
+                {
+                    drawContextMenu();
                 }
                 
                 SDL_RenderPresent(gRenderer);

@@ -17,6 +17,7 @@ enum GameState
     GS_TERM,
     GS_HELP,
     GS_MANAGE,
+    GS_CONTEXT,
     GS_QUIT
 };
 
