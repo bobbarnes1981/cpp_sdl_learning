@@ -109,9 +109,10 @@ class Popup : Entity
         int y;
         int w;
         int h;
+        unsigned int openedTicks;
         Popup();
         ~Popup();
-        bool draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int ticks, unsigned int currentTicks);
+        bool draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int currentTicks);
 };
 
 Popup::Popup()
@@ -124,7 +125,7 @@ Popup::~Popup()
     
 };
 
-bool Popup::draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int ticks, unsigned int currentTicks)
+bool Popup::draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int currentTicks)
 {
     SDL_Rect fillRect = { x, y, w, 30 };
     SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
@@ -132,7 +133,7 @@ bool Popup::draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int tick
     
     renderText(renderer, x+5, y+5, texture);
     
-    if (currentTicks - ticks > POPUP_DELAY)
+    if (currentTicks - openedTicks > POPUP_DELAY)
     {
         fillRect = { x, y+30, w, h-30 };
         SDL_SetRenderDrawColor(renderer, 0x03, 0xFC, 0xA9, 0xFF);
@@ -153,6 +154,8 @@ Button buttonCancel;
 
 Popup popupShutdown;
 Popup popupTerminal;
+Popup popupHelp;
+Popup popupManage;
 
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
@@ -210,13 +213,17 @@ SDL_Texture* buttonOKTexture = NULL;
 SDL_Surface* buttonCancelSurface = NULL;
 SDL_Texture* buttonCancelTexture = NULL;
 
-unsigned int popupShutdownOpened = 0;
 SDL_Surface* textShutdownSurface = NULL;
 SDL_Texture* textShutdownTexture = NULL;
 
-unsigned int popupTerminalOpened = 0;
 SDL_Surface* textTermSurface = NULL;
 SDL_Texture* textTermTexture = NULL;
+
+SDL_Surface* textHelpSurface = NULL;
+SDL_Texture* textHelpTexture = NULL;
+
+SDL_Surface* textManageSurface = NULL;
+SDL_Texture* textManageTexture = NULL;
 
 SDL_Surface* textBoot0Surface = NULL;
 SDL_Texture* textBoot0Texture = NULL;
@@ -240,6 +247,8 @@ enum GameState
     GS_RUN,
     GS_SHUTDOWN,
     GS_TERM,
+    GS_HELP,
+    GS_MANAGE,
     GS_QUIT
 };
 
@@ -337,6 +346,12 @@ void close()
     
     SDL_DestroyTexture(textTermTexture);
     SDL_FreeSurface(textTermSurface);
+    
+    SDL_DestroyTexture(textHelpTexture);
+    SDL_FreeSurface(textHelpSurface);
+    
+    SDL_DestroyTexture(textManageTexture);
+    SDL_FreeSurface(textManageSurface);
     
     SDL_DestroyTexture(textBoot0Texture);
     SDL_FreeSurface(textBoot0Surface);
@@ -479,11 +494,19 @@ void drawIcons()
                         termLines = 0;
                         termBuffer.push_back(termPrompt);
                         generateTerm();
-                        popupTerminalOpened = currentTicks;
+                        popupTerminal.openedTicks = currentTicks;
+                        break;
+                    case 1:
+                        currentState = GS_HELP;
+                        popupHelp.openedTicks = currentTicks;
+                        break;
+                    case 2:
+                        currentState = GS_MANAGE;
+                        popupManage.openedTicks = currentTicks;
                         break;
                     case 3:
                         currentState = GS_SHUTDOWN;
-                        popupShutdownOpened = currentTicks;
+                        popupShutdown.openedTicks = currentTicks;
                         break;
                 }
             }
@@ -507,6 +530,14 @@ void drawIcons()
         {
             renderText(x, y+h+5, textTermTexture);
         }
+        if (i == 1)
+        {
+            renderText(x, y+h+5, textHelpTexture);
+        }
+        if (i == 2)
+        {
+            renderText(x, y+h+5, textManageTexture);
+        }
         if (i == 3)
         {
             renderText(x, y+h+5, textShutdownTexture);
@@ -528,7 +559,7 @@ bool buttonCancelClicked = false;
 
 void drawShutdownPopup()
 {
-    if (popupShutdown.draw(gRenderer, textShutdownTexture, popupShutdownOpened, currentTicks))
+    if (popupShutdown.draw(gRenderer, textShutdownTexture, currentTicks))
     {
         bool newState = buttonOK.draw(gRenderer, buttonOKTexture, mouseDown, mouseX, mouseY);
         if (newState == false && buttonOKClicked == true)
@@ -548,13 +579,29 @@ void drawShutdownPopup()
 
 void drawTermPopup()
 {
-    if (popupTerminal.draw(gRenderer, textTermTexture, popupTerminalOpened, currentTicks))
+    if (popupTerminal.draw(gRenderer, textTermTexture, currentTicks))
     {
         SDL_Rect fillRect = { popupTerminal.x+5, popupTerminal.y+30+5, popupTerminal.w-(5*2), popupTerminal.h-30-(5*2) };
         SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderFillRect(gRenderer, &fillRect);
         
         renderText(popupTerminal.x+5, popupTerminal.y+30+5, textTermBufferTexture);
+    }
+}
+
+void drawManagePopup()
+{
+    if (popupManage.draw(gRenderer, textManageTexture, currentTicks))
+    {
+        
+    }
+}
+
+void drawHelpPopup()
+{
+    if (popupHelp.draw(gRenderer, textHelpTexture, currentTicks))
+    {
+        
     }
 }
 
@@ -568,7 +615,7 @@ void handleKey(SDL_Keycode keycode)
             {
                 currentState = GS_SHUTDOWN;
             }
-            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM)
+            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM || currentState == GS_HELP || currentState == GS_MANAGE)
             {
                 currentState = GS_RUN;
             }
@@ -686,6 +733,12 @@ void generateText()
     textTermSurface = TTF_RenderText_Solid(gFont, "Term", black);
     textTermTexture = SDL_CreateTextureFromSurface(gRenderer, textTermSurface);
     
+    textHelpSurface = TTF_RenderText_Solid(gFont, "Help", black);
+    textHelpTexture = SDL_CreateTextureFromSurface(gRenderer, textHelpSurface);
+    
+    textManageSurface = TTF_RenderText_Solid(gFont, "Manage", black);
+    textManageTexture = SDL_CreateTextureFromSurface(gRenderer, textManageSurface);
+    
     SDL_Color grey = { 0xC0, 0xC0, 0xC0 };
     textBoot0Surface = TTF_RenderText_Solid(gFont, "System Disk OS Version 0.1", grey);
     textBoot0Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot0Surface);
@@ -707,11 +760,25 @@ int main(int argc, char* args[])
     popupTerminal.h = 300;
     popupTerminal.x = (SCREEN_WIDTH/2)-popupTerminal.w/2;
     popupTerminal.y = (SCREEN_HEIGHT/2)-popupTerminal.h/2;
+    popupTerminal.openedTicks = 0;
+    
+    popupHelp.w = 250;
+    popupHelp.h = 400;
+    popupHelp.x = (SCREEN_WIDTH/4*3)-popupHelp.w/2;
+    popupHelp.y = (SCREEN_HEIGHT/2)-popupHelp.h/2;
+    popupHelp.openedTicks = 0;
+    
+    popupManage.w = 500;
+    popupManage.h = 400;
+    popupManage.x = (SCREEN_WIDTH/2)-popupManage.w/2;
+    popupManage.y = (SCREEN_HEIGHT/2)-popupManage.h/2;
+    popupManage.openedTicks = 0;
     
     popupShutdown.w = 150;
     popupShutdown.h = 100;
     popupShutdown.x = (SCREEN_WIDTH/2)-popupShutdown.w/2;
     popupShutdown.y = (SCREEN_HEIGHT/2)-popupShutdown.h/2;
+    popupShutdown.openedTicks = 0;
     
     buttonOK.w = 60;
     buttonOK.h = 30;
@@ -781,6 +848,16 @@ int main(int argc, char* args[])
                 if (currentState == GS_TERM)
                 {
                     drawTermPopup();
+                }
+                
+                if (currentState == GS_HELP)
+                {
+                    drawHelpPopup();
+                }
+                
+                if (currentState == GS_MANAGE)
+                {
+                    drawManagePopup();
                 }
                 
                 SDL_RenderPresent(gRenderer);
