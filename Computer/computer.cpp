@@ -86,33 +86,18 @@ SDL_Surface* buttonCancelSurface = NULL;
 SDL_Texture* buttonCancelTexture = NULL;
 
 Text textShutdown;
-SDL_Surface* textShutdownSurface = NULL;
-SDL_Texture* textShutdownTexture = NULL;
-
-Text textTerm;
-SDL_Surface* textTermSurface = NULL;
-SDL_Texture* textTermTexture = NULL;
-
+Text textTerminal;
 Text textHelp;
-SDL_Surface* textHelpSurface = NULL;
-SDL_Texture* textHelpTexture = NULL;
-
 Text textManage;
-SDL_Surface* textManageSurface = NULL;
-SDL_Texture* textManageTexture = NULL;
 
 Text textTerminalBuffer;
 char termPrompt = '>';
 int termLines = 0;
 std::string termBuffer = "";
-SDL_Surface* textTermBufferSurface = NULL;
-SDL_Texture* textTermBufferTexture = NULL;
 
 Text textBootBuffer;
 int bootLines = 0;
 std::string bootBuffer = "";
-SDL_Surface* textBootBufferSurface = NULL;
-SDL_Texture* textBootBufferTexture = NULL;
 
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
@@ -134,7 +119,7 @@ bool init()
             printf("Warning: Linear texture filtering not enabled!");
         }
         
-        gWindow = SDL_CreateWindow( "SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        gWindow = SDL_CreateWindow( "Computer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
         if(gWindow == NULL)
         {
             printf("Window could not be initialised! SDL_Error: %s\n", SDL_GetError());
@@ -202,24 +187,6 @@ void close()
     
     SDL_DestroyTexture(buttonCancelTexture);
     SDL_FreeSurface(buttonCancelSurface);
-    
-    SDL_DestroyTexture(textShutdownTexture);
-    SDL_FreeSurface(textShutdownSurface);
-    
-    SDL_DestroyTexture(textTermTexture);
-    SDL_FreeSurface(textTermSurface);
-    
-    SDL_DestroyTexture(textHelpTexture);
-    SDL_FreeSurface(textHelpSurface);
-    
-    SDL_DestroyTexture(textManageTexture);
-    SDL_FreeSurface(textManageSurface);
-    
-    SDL_DestroyTexture(textTermBufferTexture);
-    SDL_FreeSurface(textTermBufferSurface);
-    
-    SDL_DestroyTexture(textBootBufferTexture);
-    SDL_FreeSurface(textBootBufferSurface);
     
     TTF_CloseFont(gFont);
     gFont = NULL;
@@ -395,27 +362,27 @@ void drawIcons()
         
         if (i == 0)
         {
-            textTerm.x = x;
-            textTerm.y = y+h+5;
-            textTerm.draw(gRenderer, textTermTexture);
+            textTerminal.x = x;
+            textTerminal.y = y+h+5;
+            textTerminal.draw(gRenderer);
         }
         if (i == 1)
         {
             textHelp.x = x;
             textHelp.y = y+h+5;
-            textHelp.draw(gRenderer, textHelpTexture);
+            textHelp.draw(gRenderer);
         }
         if (i == 2)
         {
             textManage.x = x;
             textManage.y = y+h+5;
-            textManage.draw(gRenderer, textManageTexture);
+            textManage.draw(gRenderer);
         }
         if (i == 3)
         {
             textShutdown.x = x;
             textShutdown.y = y+h+5;
-            textShutdown.draw(gRenderer, textShutdownTexture);
+            textShutdown.draw(gRenderer);
         }
     }
 }
@@ -425,7 +392,7 @@ bool buttonCancelClicked = false;
 
 void drawShutdownPopup()
 {
-    if (popupShutdown.draw(gRenderer, textShutdownTexture, currentTicks))
+    if (popupShutdown.draw(gRenderer, currentTicks))
     {
         bool newState = buttonOK.draw(gRenderer, buttonOKTexture, mouseDown, mouseX, mouseY);
         if (newState == false && buttonOKClicked == true)
@@ -441,18 +408,22 @@ void drawShutdownPopup()
         }
         buttonCancelClicked = newState;
     }
+    
+    textShutdown.x = popupShutdown.x+5;
+    textShutdown.y = popupShutdown.y+5;
+    textShutdown.draw(gRenderer);
 }
 
 void drawBootBuffer()
 {
     textBootBuffer.x = 10;
     textBootBuffer.y = 10;
-    textBootBuffer.draw(gRenderer, textBootBufferTexture);
+    textBootBuffer.draw(gRenderer);
 }
 
 void drawTermPopup()
 {
-    if (popupTerminal.draw(gRenderer, textTermTexture, currentTicks))
+    if (popupTerminal.draw(gRenderer, currentTicks))
     {
         SDL_Rect fillRect = { popupTerminal.x+5, popupTerminal.y+30+5, popupTerminal.w-(5*2), popupTerminal.h-30-(5*2) };
         SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
@@ -460,24 +431,36 @@ void drawTermPopup()
         
         textTerminalBuffer.x = popupTerminal.x+5;
         textTerminalBuffer.y = popupTerminal.y+30+5;
-        textTerminalBuffer.draw(gRenderer, textTermBufferTexture);
+        textTerminalBuffer.draw(gRenderer);
     }
+    
+    textTerminal.x = popupTerminal.x+5;
+    textTerminal.y = popupTerminal.y+5;
+    textTerminal.draw(gRenderer);
 }
 
 void drawManagePopup()
 {
-    if (popupManage.draw(gRenderer, textManageTexture, currentTicks))
+    if (popupManage.draw(gRenderer, currentTicks))
     {
         
     }
+    
+    textManage.x = popupManage.x+5;
+    textManage.y = popupManage.y+5;
+    textManage.draw(gRenderer);
 }
 
 void drawHelpPopup()
 {
-    if (popupHelp.draw(gRenderer, textHelpTexture, currentTicks))
+    if (popupHelp.draw(gRenderer, currentTicks))
     {
         
     }
+    
+    textHelp.x = popupHelp.x+5;
+    textHelp.y = popupHelp.y+5;
+    textHelp.draw(gRenderer);
 }
 
 void handleKey(SDL_Keycode keycode)
@@ -524,12 +507,8 @@ void bootBufferGenerate()
         bootLines-=1;
     }
     
-    SDL_DestroyTexture(textBootBufferTexture);
-    SDL_FreeSurface(textBootBufferSurface);
-    
     SDL_Color grey = { 0xC0, 0xC0, 0xC0 };
-    textBootBufferSurface = TTF_RenderText_Blended_Wrapped(gFont, bootBuffer.c_str(), grey, SCREEN_WIDTH);
-    textBootBufferTexture = SDL_CreateTextureFromSurface(gRenderer, textBootBufferSurface);
+    textBootBuffer.generateWrapped(gRenderer, gFont, grey, bootBuffer.c_str(), SCREEN_WIDTH);
 }
 
 void terminalBufferUpdate(SDL_Keycode keycode)
@@ -567,12 +546,8 @@ void terminalBufferGenerate()
         termLines-=1;
     }
     
-    SDL_DestroyTexture(textTermBufferTexture);
-    SDL_FreeSurface(textTermBufferSurface);
-    
     SDL_Color green = { 0x00, 0xFF, 0x00 };
-    textTermBufferSurface = TTF_RenderText_Blended_Wrapped(gFont, termBuffer.c_str(), green, popupTerminal.w-(5*2));
-    textTermBufferTexture = SDL_CreateTextureFromSurface(gRenderer, textTermBufferSurface);
+    textTerminalBuffer.generateWrapped(gRenderer, gFont, green, termBuffer.c_str(), popupTerminal.w-(5*2));
 }
 
 void terminalBufferProcess()
@@ -636,24 +611,21 @@ void generateText()
     buttonCancelSurface = TTF_RenderText_Solid(gFont, "Cancel", black);
     buttonCancelTexture = SDL_CreateTextureFromSurface(gRenderer, buttonCancelSurface);
     
-    textShutdownSurface = TTF_RenderText_Solid(gFont, "Shutdown", black);
-    textShutdownTexture = SDL_CreateTextureFromSurface(gRenderer, textShutdownSurface);
+    textShutdown.generate(gRenderer, gFont, black, "Shutdown");
     
-    textTermSurface = TTF_RenderText_Solid(gFont, "Term", black);
-    textTermTexture = SDL_CreateTextureFromSurface(gRenderer, textTermSurface);
+    textTerminal.generate(gRenderer, gFont, black, "Terminal");
     
-    textHelpSurface = TTF_RenderText_Solid(gFont, "Help", black);
-    textHelpTexture = SDL_CreateTextureFromSurface(gRenderer, textHelpSurface);
+    textHelp.generate(gRenderer, gFont, black, "Help");
     
-    textManageSurface = TTF_RenderText_Solid(gFont, "Manage", black);
-    textManageTexture = SDL_CreateTextureFromSurface(gRenderer, textManageSurface);
+    textManage.generate(gRenderer, gFont, black, "Manage");
 }
 
 void boot()
 {
+    bootBufferUpdate("Rebooting");
     bootBuffer.clear();
     bootLines = 0;
-    startTime = SDL_GetTicks();
+    startTime = currentTicks; // SDL_GetTicks();
     currentState = GS_START;
 }
 
