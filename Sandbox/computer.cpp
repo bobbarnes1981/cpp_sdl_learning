@@ -5,149 +5,12 @@
 #include <string>
 #include <cmath>
 
-#define STARTUP_FLASH 125
-#define STARTUP_BLANK 600
-#define STARTUP_FADE 900
-#define STARTUP_ICON 1000
-#define DOUBLE_CLICK 250
-#define ICON_DELAY 125
-#define POPUP_DELAY 250
-
-class Entity
-{
-    public:
-        Entity();
-        ~Entity();
-    protected:
-        void renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture);
-};
-
-Entity::Entity()
-{
-    
-};
-
-Entity::~Entity()
-{
-    
-};
-
-void Entity::renderText(SDL_Renderer* renderer, int x, int y, SDL_Texture* texture)
-{
-    int texW = 0;
-    int texH = 0;
-    SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
-    SDL_Rect dstrect = { x, y, texW, texH };
-    SDL_RenderCopy(renderer, texture, NULL, &dstrect);
-};
-
-class Button : Entity
-{
-    public:
-        int x;
-        int y;
-        int w;
-        int h;
-        Button();
-        ~Button();
-        bool draw(SDL_Renderer* renderer, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY);
-    private:
-};
-
-Button::Button()
-{
-    
-};
-
-Button::~Button()
-{
-    
-};
-
-bool Button::draw(SDL_Renderer* renderer, SDL_Texture* texture, bool mouseDown, int mouseX, int mouseY)
-{
-    bool pressed = false;
-    if (mouseDown && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
-    {
-        pressed = true;
-    }
-    
-    SDL_Rect fillRect = { x, y, w, h };
-    SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
-    SDL_RenderFillRect(renderer, &fillRect);
-    
-    if (pressed)
-    {
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    }
-    SDL_RenderDrawLine(renderer, x, y, x+w, y);
-    SDL_RenderDrawLine(renderer, x, y, x, y+h);
-    if (pressed)
-    {
-        SDL_SetRenderDrawColor(renderer, 0xFF, 0xFF, 0xFF, 0xFF);
-    }
-    else
-    {
-        SDL_SetRenderDrawColor(renderer, 0x00, 0x00, 0x00, 0xFF);
-    }
-    SDL_RenderDrawLine(renderer, x, y+h, x+w, y+h);
-    SDL_RenderDrawLine(renderer, x+w, y, x+w, y+h);
-    
-    renderText(renderer, x+5, y+5, texture);
-    
-    return pressed;
-};
-
-class Popup : Entity
-{
-    public:
-        int x;
-        int y;
-        int w;
-        int h;
-        unsigned int openedTicks;
-        Popup();
-        ~Popup();
-        bool draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int currentTicks);
-};
-
-Popup::Popup()
-{
-    
-};
-
-Popup::~Popup()
-{
-    
-};
-
-bool Popup::draw(SDL_Renderer* renderer, SDL_Texture* texture, unsigned int currentTicks)
-{
-    SDL_Rect fillRect = { x, y, w, 30 };
-    SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
-    SDL_RenderFillRect(renderer, &fillRect);
-    
-    renderText(renderer, x+5, y+5, texture);
-    
-    if (currentTicks - openedTicks > POPUP_DELAY)
-    {
-        fillRect = { x, y+30, w, h-30 };
-        SDL_SetRenderDrawColor(renderer, 0x03, 0xFC, 0xA9, 0xFF);
-        SDL_RenderFillRect(renderer, &fillRect);
-        
-        SDL_Rect outlineRect = { x, y, w, h };
-        SDL_SetRenderDrawColor(renderer, 0x03, 0x36, 0x25, 0xFF);
-        SDL_RenderDrawRect(renderer, &outlineRect);
-        
-        return true;
-    }
-    
-    return false;
-};
+#include "computer.h"
+#include "entity.h"
+#include "button.h"
+#include "popup.h"
+#include "icon.h"
+#include "text.h"
 
 Button buttonOK;
 Button buttonCancel;
@@ -177,6 +40,8 @@ void close();
 
 void drawDesktop();
 
+void drawBootBuffer();
+
 void drawIcons();
 
 void drawShutdownPopup();
@@ -189,15 +54,22 @@ void handleMouse(unsigned int type);
 
 void generateText();
 
-void renderText(int x, int y, SDL_Texture* texture);
+void terminalBufferUpdate(SDL_Keycode keycode);
 
-void generateTerm();
+void terminalBufferGenerate();
 
-void processTerm();
+void terminalBufferProcess();
+
+void bootBufferUpdate(std::string line);
+
+void bootBufferGenerate();
 
 void boot();
 
 unsigned int startTime = 0;
+
+bool alphaOverride = false;
+char desktopAlpha;
 
 SDL_Texture* loadTexture(std::string path);
 
@@ -213,44 +85,34 @@ SDL_Texture* buttonOKTexture = NULL;
 SDL_Surface* buttonCancelSurface = NULL;
 SDL_Texture* buttonCancelTexture = NULL;
 
+Text textShutdown;
 SDL_Surface* textShutdownSurface = NULL;
 SDL_Texture* textShutdownTexture = NULL;
 
+Text textTerm;
 SDL_Surface* textTermSurface = NULL;
 SDL_Texture* textTermTexture = NULL;
 
+Text textHelp;
 SDL_Surface* textHelpSurface = NULL;
 SDL_Texture* textHelpTexture = NULL;
 
+Text textManage;
 SDL_Surface* textManageSurface = NULL;
 SDL_Texture* textManageTexture = NULL;
 
-SDL_Surface* textBoot0Surface = NULL;
-SDL_Texture* textBoot0Texture = NULL;
-
-SDL_Surface* textBoot1Surface = NULL;
-SDL_Texture* textBoot1Texture = NULL;
-
-SDL_Surface* textBoot2Surface = NULL;
-SDL_Texture* textBoot2Texture = NULL;
-
+Text textTerminalBuffer;
 char termPrompt = '>';
 int termLines = 0;
 std::string termBuffer = "";
 SDL_Surface* textTermBufferSurface = NULL;
 SDL_Texture* textTermBufferTexture = NULL;
 
-enum GameState
-{
-    GS_START,
-    GS_DESKTOP,
-    GS_RUN,
-    GS_SHUTDOWN,
-    GS_TERM,
-    GS_HELP,
-    GS_MANAGE,
-    GS_QUIT
-};
+Text textBootBuffer;
+int bootLines = 0;
+std::string bootBuffer = "";
+SDL_Surface* textBootBufferSurface = NULL;
+SDL_Texture* textBootBufferTexture = NULL;
 
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
@@ -353,17 +215,11 @@ void close()
     SDL_DestroyTexture(textManageTexture);
     SDL_FreeSurface(textManageSurface);
     
-    SDL_DestroyTexture(textBoot0Texture);
-    SDL_FreeSurface(textBoot0Surface);
-    
-    SDL_DestroyTexture(textBoot1Texture);
-    SDL_FreeSurface(textBoot1Surface);
-    
-    SDL_DestroyTexture(textBoot2Texture);
-    SDL_FreeSurface(textBoot2Surface);
-    
     SDL_DestroyTexture(textTermBufferTexture);
     SDL_FreeSurface(textTermBufferSurface);
+    
+    SDL_DestroyTexture(textBootBufferTexture);
+    SDL_FreeSurface(textBootBufferSurface);
     
     TTF_CloseFont(gFont);
     gFont = NULL;
@@ -401,26 +257,31 @@ void drawDesktop()
     SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
     SDL_RenderClear(gRenderer);
     
-    char alpha = 0xFF;
+    desktopAlpha = 0xFF;
+    
+    int numBoot = 3;
+    int bootTime = currentTicks-startTime-(STARTUP_FLASH);
+    int bootToDraw =  bootTime / (STARTUP_BLANK / numBoot);
+    
+    if (bootToDraw >= 0 && bootLines < 1)
+    {
+        bootBufferUpdate("System Disk OS Version 0.1");
+    }
+    if (bootToDraw >= 1 && bootLines < 2)
+    {
+        bootBufferUpdate("(c) company name 19xx");
+    }
+    if (bootToDraw >= 2 && bootLines < 3)
+    {
+        bootBufferUpdate("Starting...");
+    }
+    drawBootBuffer();
+    
     if (currentState == GS_START)
     {
         if (currentTicks - startTime < STARTUP_FLASH + STARTUP_BLANK)
         {
-            alpha = 0x00;
-            
-            int numBoot = 3;
-            int bootTime = currentTicks-startTime-(STARTUP_FLASH);
-            int bootToDraw =  bootTime / (STARTUP_BLANK / numBoot);
-            switch (bootToDraw)
-            {
-                case 2:
-                    renderText(10, 50, textBoot2Texture);
-                case 1:
-                    renderText(10, 30, textBoot1Texture);
-                case 0:
-                    renderText(10, 10, textBoot0Texture);
-                    break;
-            }
+            desktopAlpha = 0x00;
             
             if (currentTicks-startTime < STARTUP_FLASH)
             {
@@ -431,7 +292,8 @@ void drawDesktop()
         }
         else
         {
-            alpha = (256.0 / STARTUP_FADE) * (currentTicks - startTime - (STARTUP_FLASH + STARTUP_BLANK));
+            SDL_RenderClear(gRenderer);
+            desktopAlpha = (256.0 / STARTUP_FADE) * (currentTicks - startTime - (STARTUP_FLASH + STARTUP_BLANK));
     
             if (currentTicks - startTime > STARTUP_FADE + STARTUP_FLASH + STARTUP_BLANK)
             {
@@ -441,12 +303,17 @@ void drawDesktop()
         }
     }
 
+    if (alphaOverride)
+    {
+        desktopAlpha = 0x00;
+    }
+
     SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, 30 };
-    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, alpha);
+    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, desktopAlpha);
     SDL_RenderFillRect(gRenderer, &fillRect);
     
     fillRect = { 0, 30, SCREEN_WIDTH, SCREEN_HEIGHT-30 };
-    SDL_SetRenderDrawColor(gRenderer, 0x03, 0xFC, 0xA9, alpha);
+    SDL_SetRenderDrawColor(gRenderer, 0x03, 0xFC, 0xA9, desktopAlpha);
     SDL_RenderFillRect(gRenderer, &fillRect);
 }
 
@@ -493,7 +360,7 @@ void drawIcons()
                         termBuffer.clear();
                         termLines = 0;
                         termBuffer.push_back(termPrompt);
-                        generateTerm();
+                        terminalBufferGenerate();
                         popupTerminal.openedTicks = currentTicks;
                         break;
                     case 1:
@@ -512,7 +379,7 @@ void drawIcons()
             }
         }
         
-        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, 0xFF);
+        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, desktopAlpha);
         if (iconSelected == i)
         {
             SDL_RenderFillRect(gRenderer, &outlineRect);
@@ -528,30 +395,29 @@ void drawIcons()
         
         if (i == 0)
         {
-            renderText(x, y+h+5, textTermTexture);
+            textTerm.x = x;
+            textTerm.y = y+h+5;
+            textTerm.draw(gRenderer, textTermTexture);
         }
         if (i == 1)
         {
-            renderText(x, y+h+5, textHelpTexture);
+            textHelp.x = x;
+            textHelp.y = y+h+5;
+            textHelp.draw(gRenderer, textHelpTexture);
         }
         if (i == 2)
         {
-            renderText(x, y+h+5, textManageTexture);
+            textManage.x = x;
+            textManage.y = y+h+5;
+            textManage.draw(gRenderer, textManageTexture);
         }
         if (i == 3)
         {
-            renderText(x, y+h+5, textShutdownTexture);
+            textShutdown.x = x;
+            textShutdown.y = y+h+5;
+            textShutdown.draw(gRenderer, textShutdownTexture);
         }
     }
-}
-
-void renderText(int x, int y, SDL_Texture* texture)
-{
-    int texW = 0;
-    int texH = 0;
-    SDL_QueryTexture(texture, NULL, NULL, &texW, &texH);
-    SDL_Rect dstrect = { x, y, texW, texH };
-    SDL_RenderCopy(gRenderer, texture, NULL, &dstrect);
 }
 
 bool buttonOKClicked = false;
@@ -577,6 +443,13 @@ void drawShutdownPopup()
     }
 }
 
+void drawBootBuffer()
+{
+    textBootBuffer.x = 10;
+    textBootBuffer.y = 10;
+    textBootBuffer.draw(gRenderer, textBootBufferTexture);
+}
+
 void drawTermPopup()
 {
     if (popupTerminal.draw(gRenderer, textTermTexture, currentTicks))
@@ -585,7 +458,9 @@ void drawTermPopup()
         SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
         SDL_RenderFillRect(gRenderer, &fillRect);
         
-        renderText(popupTerminal.x+5, popupTerminal.y+30+5, textTermBufferTexture);
+        textTerminalBuffer.x = popupTerminal.x+5;
+        textTerminalBuffer.y = popupTerminal.y+30+5;
+        textTerminalBuffer.draw(gRenderer, textTermBufferTexture);
     }
 }
 
@@ -620,44 +495,78 @@ void handleKey(SDL_Keycode keycode)
                 currentState = GS_RUN;
             }
             break;
+        case SDLK_F1:
+            alphaOverride = !alphaOverride;
+            break;
         default:
             if (currentState == GS_TERM)
             {
-                //printf("%d\n", keycode);
-                
-                switch(keycode)
-                {
-                    case '\r':
-                        termBuffer.push_back(keycode);
-                        processTerm();
-                        termBuffer.push_back(termPrompt);
-                        termLines += 1;
-                        break;
-                    case '\b':
-                        if (termBuffer.length() == 2 || termBuffer.length() > 2 && termBuffer[termBuffer.length()-2] != '\r')
-                        {
-                            termBuffer.pop_back();
-                        }
-                        break;
-                    default:
-                        termBuffer.push_back(keycode);
-                        break;
-                }
-                
-                while (termLines > 13)
-                {
-                    std::size_t loc = termBuffer.find('\r');
-                    termBuffer = termBuffer.substr(loc+1);
-                    termLines-=1;
-                }
-                generateTerm();
+                terminalBufferUpdate(keycode);
             }
             break;
     }
 }
 
-void generateTerm()
+void bootBufferUpdate(std::string line)
 {
+    bootBuffer.append(line);
+    bootBuffer.append("\r");
+    bootLines += 1;
+    bootBufferGenerate();
+}
+
+void bootBufferGenerate()
+{
+    while (bootLines > 20)
+    {
+        std::size_t loc = bootBuffer.find('\r');
+        bootBuffer = bootBuffer.substr(loc+1);
+        bootLines-=1;
+    }
+    
+    SDL_DestroyTexture(textBootBufferTexture);
+    SDL_FreeSurface(textBootBufferSurface);
+    
+    SDL_Color grey = { 0xC0, 0xC0, 0xC0 };
+    textBootBufferSurface = TTF_RenderText_Blended_Wrapped(gFont, bootBuffer.c_str(), grey, SCREEN_WIDTH);
+    textBootBufferTexture = SDL_CreateTextureFromSurface(gRenderer, textBootBufferSurface);
+}
+
+void terminalBufferUpdate(SDL_Keycode keycode)
+{
+    //printf("%d\n", keycode);
+    
+    switch(keycode)
+    {
+        case '\r':
+            termBuffer.push_back(keycode);
+            terminalBufferProcess();
+            termBuffer.push_back(termPrompt);
+            termLines += 1;
+            break;
+        case '\b':
+            if (termBuffer.length() == 2 || termBuffer.length() > 2 && termBuffer[termBuffer.length()-2] != '\r')
+            {
+                termBuffer.pop_back();
+            }
+            break;
+        default:
+            termBuffer.push_back(keycode);
+            break;
+    }
+    
+    terminalBufferGenerate();
+}
+
+void terminalBufferGenerate()
+{
+    while (termLines > 13)
+    {
+        std::size_t loc = termBuffer.find('\r');
+        termBuffer = termBuffer.substr(loc+1);
+        termLines-=1;
+    }
+    
     SDL_DestroyTexture(textTermBufferTexture);
     SDL_FreeSurface(textTermBufferSurface);
     
@@ -666,7 +575,7 @@ void generateTerm()
     textTermBufferTexture = SDL_CreateTextureFromSurface(gRenderer, textTermBufferSurface);
 }
 
-void processTerm()
+void terminalBufferProcess()
 {
     std::size_t loc = termBuffer.rfind('\r', termBuffer.length()-2);
     std::string command = termBuffer.substr(loc+2, termBuffer.length()-(loc+2+1));
@@ -738,18 +647,12 @@ void generateText()
     
     textManageSurface = TTF_RenderText_Solid(gFont, "Manage", black);
     textManageTexture = SDL_CreateTextureFromSurface(gRenderer, textManageSurface);
-    
-    SDL_Color grey = { 0xC0, 0xC0, 0xC0 };
-    textBoot0Surface = TTF_RenderText_Solid(gFont, "System Disk OS Version 0.1", grey);
-    textBoot0Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot0Surface);
-    textBoot1Surface = TTF_RenderText_Solid(gFont, "(c) company name 19xx", grey);
-    textBoot1Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot1Surface);
-    textBoot2Surface = TTF_RenderText_Solid(gFont, "Startup...", grey);
-    textBoot2Texture = SDL_CreateTextureFromSurface(gRenderer, textBoot2Surface);
 }
 
 void boot()
 {
+    bootBuffer.clear();
+    bootLines = 0;
     startTime = SDL_GetTicks();
     currentState = GS_START;
 }
