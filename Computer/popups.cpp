@@ -80,3 +80,11 @@ void Popups::remove(PopupType popup)
         }
     }
 }
+
+void Popups::clear()
+{
+    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
+    {
+        order[i] = P_NONE;
+    }
+}

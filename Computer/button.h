@@ -6,13 +6,15 @@
 class Button : Entity
 {
     public:
+        bool pressed;
         int x;
         int y;
         int w;
         int h;
         Button();
         ~Button();
-        bool draw(SDL_Renderer* renderer, bool mouseDown, int mouseX, int mouseY);
+        bool update(bool mouseDown, int mouseX, int mouseY);
+        void draw(SDL_Renderer* renderer);
     private:
 };
 

@@ -13,14 +13,25 @@ Button::~Button()
     
 };
 
-bool Button::draw(SDL_Renderer* renderer, bool mouseDown, int mouseX, int mouseY)
+bool Button::update(bool mouseDown, int mouseX, int mouseY)
 {
-    bool pressed = false;
+    bool newPressed = false;
     if (mouseDown && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
     {
-        pressed = true;
+        newPressed = true;
+    }
+    if (newPressed == false && pressed == true)
+    {
+        pressed = newPressed;
+        return true;
     }
     
+    pressed = newPressed;
+    return false;
+}
+
+void Button::draw(SDL_Renderer* renderer)
+{
     SDL_Rect fillRect = { x, y, w, h };
     SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
     SDL_RenderFillRect(renderer, &fillRect);
@@ -45,6 +56,4 @@ bool Button::draw(SDL_Renderer* renderer, bool mouseDown, int mouseX, int mouseY
     }
     SDL_RenderDrawLine(renderer, x, y+h, x+w, y+h);
     SDL_RenderDrawLine(renderer, x+w, y, x+w, y+h);
-    
-    return pressed;
 };

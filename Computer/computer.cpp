@@ -15,6 +15,8 @@
 
 Button buttonOK;
 Button buttonCancel;
+Button buttonLArrow;
+Button buttonRArrow;
 
 Popup popupShutdown;
 Popup popupTerminal;
@@ -53,6 +55,10 @@ void drawIcons();
 
 void drawShutdownPopup();
 
+void drawShutdownFadeIn();
+
+void drawShutdownFadeOut();
+
 void drawTermPopup();
 
 void handleKey();
@@ -88,6 +94,9 @@ unsigned int startTime = 0;
 bool alphaOverride = false;
 char desktopAlpha;
 
+unsigned int shutdownFadeTicks = 0;
+char shutdownFadeMaxAlpha = 128;
+
 SDL_Texture* loadTexture(std::string path);
 
 SDL_Window* gWindow = NULL;
@@ -98,6 +107,9 @@ TTF_Font* gFont = NULL;
 
 Text textOK;
 Text textCancel;
+
+Text textLArrow;
+Text textRArrow;
 
 Text textShutdown;
 Text textTerminal;
@@ -365,8 +377,8 @@ void drawIcons()
                         }
                         break;
                     case 3:
-                        currentState = GS_SHUTDOWN;
-                        popupShutdown.openedTicks = currentTicks;
+                        currentState = GS_SHUTDOWN_FADE_IN;
+                        shutdownFadeTicks = currentTicks;
                         break;
                 }
             }
@@ -413,41 +425,90 @@ void drawIcons()
     }
 }
 
-bool buttonOKClicked = false;
-bool buttonCancelClicked = false;
-
 void drawShutdownPopup()
 {
     SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
-    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0x80);
+    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, shutdownFadeMaxAlpha);
     SDL_RenderFillRect(gRenderer, &fillRect);
     
     if (popupShutdown.draw(gRenderer, currentTicks))
     {
-        bool newState = buttonOK.draw(gRenderer, mouseDown1, mouseX, mouseY);
+        bool pressed = buttonOK.update(mouseDown1, mouseX, mouseY);
+        buttonOK.draw(gRenderer);
         textOK.x = buttonOK.x+5;
         textOK.y = buttonOK.y+5;
         textOK.draw(gRenderer);
-        if (newState == false && buttonOKClicked == true)
+        if (pressed)
         {
             currentState = GS_QUIT;
         }
-        buttonOKClicked = newState;
         
-        newState = buttonCancel.draw(gRenderer, mouseDown1, mouseX, mouseY);
+        pressed = buttonCancel.update(mouseDown1, mouseX, mouseY);
+        buttonCancel.draw(gRenderer);
         textCancel.x = buttonCancel.x+5;
         textCancel.y = buttonCancel.y+5;
         textCancel.draw(gRenderer);
-        if (newState == false && buttonCancelClicked == true)
+        if (pressed)
         {
-            currentState = GS_RUN;
+            currentState = GS_SHUTDOWN_FADE_OUT;
+            shutdownFadeTicks = currentTicks;
         }
-        buttonCancelClicked = newState;
     }
     
     textShutdown.x = popupShutdown.x+5;
     textShutdown.y = popupShutdown.y+5;
     textShutdown.draw(gRenderer);
+}
+
+void drawShutdownFadeIn()
+{
+    int fillHeight = SCREEN_HEIGHT;
+    if (currentTicks - shutdownFadeTicks < SHUTDOWN_FADE_IN)
+    {
+        if (currentTicks - shutdownFadeTicks > 0)
+        {
+            fillHeight = SCREEN_HEIGHT / (SHUTDOWN_FADE_IN / (currentTicks - shutdownFadeTicks));
+        }
+        else
+        {
+            fillHeight = 0;
+        }
+    }
+    
+    SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, fillHeight };
+    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, shutdownFadeMaxAlpha);
+    SDL_RenderFillRect(gRenderer, &fillRect);
+    
+    if (currentTicks - shutdownFadeTicks > SHUTDOWN_FADE_IN)
+    {
+        currentState = GS_SHUTDOWN;
+        popupShutdown.openedTicks = currentTicks;
+    }
+}
+
+void drawShutdownFadeOut()
+{
+    int fillHeight = SCREEN_HEIGHT;
+    if (currentTicks - shutdownFadeTicks < SHUTDOWN_FADE_OUT)
+    {
+        if (currentTicks - shutdownFadeTicks > 0)
+        {
+            fillHeight = SCREEN_HEIGHT / (SHUTDOWN_FADE_OUT / (currentTicks - shutdownFadeTicks));
+        }
+        else
+        {
+            fillHeight = 0;
+        }
+    }
+    
+    SDL_Rect fillRect = { 0, fillHeight, SCREEN_WIDTH, SCREEN_HEIGHT - fillHeight };
+    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, shutdownFadeMaxAlpha);
+    SDL_RenderFillRect(gRenderer, &fillRect);
+
+    if (currentTicks - shutdownFadeTicks > SHUTDOWN_FADE_OUT)
+    {
+        currentState = GS_RUN;
+    }
 }
 
 int contextX;
@@ -528,7 +589,35 @@ void drawHelpPopup()
 {
     if (popupHelp.draw(gRenderer, currentTicks))
     {
+        SDL_Rect fillRect = { popupHelp.x+5, popupHelp.y+30+5, popupHelp.w-(5*2), popupHelp.h-(buttonLArrow.h+10)-30-(5*2) };
+        SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+        SDL_RenderFillRect(gRenderer, &fillRect);
         
+        buttonLArrow.x = popupHelp.x + 10;
+        buttonLArrow.y = popupHelp.y + popupHelp.h - (10 + buttonLArrow.h);
+        
+        buttonRArrow.x = popupHelp.x + popupHelp.w - (10 + buttonRArrow.w);
+        buttonRArrow.y = popupHelp.y + popupHelp.h - (10 + buttonRArrow.h);
+        
+        bool pressed = buttonLArrow.update(mouseDown1, mouseX, mouseY);
+        buttonLArrow.draw(gRenderer);
+        textLArrow.x = buttonLArrow.x+5;
+        textLArrow.y = buttonLArrow.y+5;
+        textLArrow.draw(gRenderer);
+        if (pressed)
+        {
+            //
+        }
+        
+        pressed = buttonRArrow.update(mouseDown1, mouseX, mouseY);
+        buttonRArrow.draw(gRenderer);
+        textRArrow.x = buttonRArrow.x+5;
+        textRArrow.y = buttonRArrow.y+5;
+        textRArrow.draw(gRenderer);
+        if (pressed)
+        {
+            //
+        }
     }
     
     textHelp.x = popupHelp.x+5;
@@ -556,11 +645,13 @@ void handleKey(SDL_Keycode keycode)
             case SDLK_ESCAPE:
                 if (currentState == GS_RUN)
                 {
-                    currentState = GS_SHUTDOWN;
+                    currentState = GS_SHUTDOWN_FADE_IN;
+                    shutdownFadeTicks = currentTicks;
                 }
                 else if (currentState == GS_SHUTDOWN)
                 {
-                    currentState = GS_RUN;
+                    currentState = GS_SHUTDOWN_FADE_OUT;
+                    shutdownFadeTicks = currentTicks;
                 }
                 break;
         }
@@ -668,6 +759,7 @@ void terminalBufferProcess()
     }
     else if (command.compare("reboot") == 0)
     {
+        popups.clear();
         boot();
     }
     else
@@ -834,6 +926,10 @@ void generateText()
     
     textCancel.generate(gRenderer, gFont, black, "Cancel");
     
+    textLArrow.generate(gRenderer, gFont, black, "<");
+    
+    textRArrow.generate(gRenderer, gFont, black, ">");
+    
     textShutdown.generate(gRenderer, gFont, black, "Shutdown");
     
     textTerminal.generate(gRenderer, gFont, black, "Terminal");
@@ -886,6 +982,12 @@ int main(int argc, char* args[])
     buttonCancel.h = 30;
     buttonCancel.x = popupShutdown.x + 80;
     buttonCancel.y = popupShutdown.y + 60;
+    
+    buttonLArrow.w = 30;
+    buttonLArrow.h = 30;
+    
+    buttonRArrow.w = 30;
+    buttonRArrow.h = 30;
 
     if (!init())
     {
@@ -984,6 +1086,14 @@ int main(int argc, char* args[])
                 }
                 
                 // shutdown drawn last, on top of everything else
+                if (currentState == GS_SHUTDOWN_FADE_IN)
+                {
+                    drawShutdownFadeIn();
+                }
+                if (currentState == GS_SHUTDOWN_FADE_OUT)
+                {
+                    drawShutdownFadeOut();
+                }
                 if (currentState == GS_SHUTDOWN)
                 {
                     drawShutdownPopup();

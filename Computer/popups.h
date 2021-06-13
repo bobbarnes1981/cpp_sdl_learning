@@ -22,6 +22,7 @@ class Popups
         void push(PopupType popup);
         void select(PopupType popup);
         void remove(PopupType popup);
+        void clear();
 };
 
 #endif
