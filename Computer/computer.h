@@ -1,16 +1,15 @@
 #ifndef __h_computer
 #define __h_computer
 
-#define STARTUP_FLASH 125
-#define STARTUP_BLANK 600
-#define STARTUP_FADE 900
-#define STARTUP_ICON 1000
-#define DOUBLE_CLICK 250
-#define ICON_DELAY 125
+#define BOOT_FLASH 125
+#define BOOT_TEXT 600
+#define DESKTOP_FADE_IN 900
+#define DESKTOP_ICON_IN 1000
+#define ICON_SELECT_TIMEOUT 125
 
 enum GameState
 {
-    GS_START,
+    GS_BOOT,
     GS_DESKTOP,
     GS_RUN,
     GS_SHUTDOWN,

@@ -39,6 +39,8 @@ bool loadMedia();
 
 void close();
 
+void drawBoot();
+
 void drawDesktop();
 
 void drawBootBuffer();
@@ -101,7 +103,7 @@ std::string bootBuffer = "";
 
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
-GameState currentState = GS_START;
+GameState currentState = GS_BOOT;
 
 bool init()
 {
@@ -213,16 +215,11 @@ SDL_Texture* loadTexture(std::string path)
     return newTexture;
 }
 
-void drawDesktop()
+void drawBoot()
 {
-    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
-    SDL_RenderClear(gRenderer);
-    
-    desktopAlpha = 0xFF;
-    
     int numBoot = 3;
-    int bootTime = currentTicks-startTime-(STARTUP_FLASH);
-    int bootToDraw =  bootTime / (STARTUP_BLANK / numBoot);
+    int bootTime = currentTicks-startTime-(BOOT_FLASH);
+    int bootToDraw =  bootTime / (BOOT_TEXT / numBoot);
     
     if (bootToDraw >= 0 && bootLines < 1)
     {
@@ -236,29 +233,40 @@ void drawDesktop()
     {
         bootBufferUpdate("Starting...");
     }
-    drawBootBuffer();
     
-    if (currentState == GS_START)
+    drawBootBuffer();
+}
+
+void drawDesktop()
+{
+    desktopAlpha = 0xFF;
+    
+    if (currentState == GS_BOOT)
     {
-        if (currentTicks - startTime < STARTUP_FLASH + STARTUP_BLANK)
+        if (currentTicks - startTime < BOOT_FLASH + BOOT_TEXT)
         {
             desktopAlpha = 0x00;
             
-            if (currentTicks-startTime < STARTUP_FLASH)
+            if (currentTicks-startTime < BOOT_FLASH)
             {
+                // white flash
                 SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
                 SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
                 SDL_RenderFillRect(gRenderer, &fillRect);
             }
+            else
+            {
+                // boot text
+            }
         }
         else
         {
+            // desktop alpha fade in
             SDL_RenderClear(gRenderer);
-            desktopAlpha = (256.0 / STARTUP_FADE) * (currentTicks - startTime - (STARTUP_FLASH + STARTUP_BLANK));
-    
-            if (currentTicks - startTime > STARTUP_FADE + STARTUP_FLASH + STARTUP_BLANK)
+            desktopAlpha = (256.0 / DESKTOP_FADE_IN) * (currentTicks - startTime - (BOOT_FLASH + BOOT_TEXT));
+            
+            if (currentTicks - startTime > DESKTOP_FADE_IN + BOOT_FLASH + BOOT_TEXT)
             {
-                //printf("desktop\n");
                 currentState = GS_DESKTOP;
             }
         }
@@ -288,15 +296,14 @@ void drawIcons()
     
     if (currentState == GS_DESKTOP)
     {
-        if (currentTicks > STARTUP_FLASH + STARTUP_BLANK + STARTUP_FADE + STARTUP_ICON)
+        if (currentTicks > BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN + DESKTOP_ICON_IN)
         {
-            //printf("run\n");
             currentState = GS_RUN;
         }
         else
         {
-            int iconTime = currentTicks-(STARTUP_FLASH + STARTUP_BLANK + STARTUP_FADE);
-            iconsToDraw =  iconTime / (STARTUP_ICON / numIcons);
+            int iconTime = currentTicks-(BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN);
+            iconsToDraw =  iconTime / (DESKTOP_ICON_IN / numIcons);
         }
     }
     
@@ -344,7 +351,7 @@ void drawIcons()
         if (iconSelected == i)
         {
             SDL_RenderFillRect(gRenderer, &outlineRect);
-            if (currentTicks - mouseClick1 > ICON_DELAY)
+            if (currentTicks - mouseClick1 > ICON_SELECT_TIMEOUT)
             {
                 iconSelected = -1;
             }
@@ -672,7 +679,7 @@ void boot()
     bootBuffer.clear();
     bootLines = 0;
     startTime = currentTicks; // SDL_GetTicks();
-    currentState = GS_START;
+    currentState = GS_BOOT;
 }
 
 int main(int argc, char* args[])
@@ -754,18 +761,18 @@ int main(int argc, char* args[])
                     }
                 }
                 
+                // clear screen
+                SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
+                SDL_RenderClear(gRenderer);
+                
+                drawBoot();
+                
                 drawDesktop();
                 
-                //printf("%d\n", currentState);
-                
-                if (currentState != GS_START)
+                // icons drawn on top of desktop
+                if (currentState != GS_BOOT)
                 {
                     drawIcons();
-                }
-                
-                if (currentState == GS_SHUTDOWN)
-                {
-                    drawShutdownPopup();
                 }
                 
                 if (currentState == GS_TERM)
@@ -786,6 +793,12 @@ int main(int argc, char* args[])
                 if (currentState == GS_CONTEXT)
                 {
                     drawContextMenu();
+                }
+                
+                // shutdown drawn last, on top of everything else
+                if (currentState == GS_SHUTDOWN)
+                {
+                    drawShutdownPopup();
                 }
                 
                 SDL_RenderPresent(gRenderer);
