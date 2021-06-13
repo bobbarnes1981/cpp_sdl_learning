@@ -781,6 +781,7 @@ void terminalBufferProcess()
     if (command.compare("quit") == 0)
     {
         // just assume terminal is active
+        Mix_PlayChannel(-1, soundPopupRemove, 0);
         popups.remove(P_TERMINAL);
     }
     else if (command.compare("help") == 0)
