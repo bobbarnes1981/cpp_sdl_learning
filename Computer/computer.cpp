@@ -27,8 +27,11 @@ const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
+PopupType clickedPopup = P_NONE;
 int mouseX = -1;
 int mouseY = -1;
+int mouseDragX = 0;
+int mouseDragY = 0;
 bool mouseDown1 = false;
 unsigned int mouseClick1 = -1;
 bool mouseDown3 = false;
@@ -621,36 +624,112 @@ void terminalBufferProcess()
     }
 }
 
+PopupType popupClicked(int x, int y)
+{
+    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
+    {
+        switch (popups.order[i])
+        {
+            case P_HELP:
+                if (popupHelp.isClicked(x, y))
+                {
+                    return P_HELP;
+                }
+                break;
+            case P_MANAGE:
+                if (popupManage.isClicked(x, y))
+                {
+                    return P_MANAGE;
+                }
+                break;
+            case P_TERMINAL:
+                if (popupTerminal.isClicked(x, y))
+                {
+                    return P_TERMINAL;
+                }
+                break;
+        }
+    }
+    
+    return P_NONE;
+}
+
+void popupDrag(PopupType popup, int x, int y)
+{
+    //printf("%d,%d\n", x, y);
+    switch (popup)
+    {
+        case P_HELP:
+            popupHelp.drag(x, y);
+            break;
+        case P_MANAGE:
+            popupManage.drag(x, y);
+            break;
+        case P_TERMINAL:
+            popupTerminal.drag(x, y);
+            break;
+    }
+}
+
+void popupFakeDrag(PopupType popup, int x, int y)
+{
+    switch (popup)
+    {
+        case P_HELP:
+            popupHelp.fakeDrag(x, y);
+        case P_MANAGE:
+            popupManage.fakeDrag(x, y);
+            break;
+        case P_TERMINAL:
+            popupTerminal.fakeDrag(x, y);
+            break;
+    }
+}
+
 void handleMouse(unsigned int type, int button)
 {
-    int x, y;
-    SDL_GetMouseState(&x, &y);
-    //printf("%d %d\n", x, y);
-    mouseX = x;
-    mouseY = y;
     switch(type)
     {
         case SDL_MOUSEBUTTONDOWN:
-            //printf("%d\n", button);
+            int x, y;
+            SDL_GetMouseState(&x, &y);
+            mouseX = x;
+            mouseY = y;
             if (button == 1)
             {
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
+                
+                clickedPopup = popupClicked(mouseX, mouseY);
+                //printf("%d\n", clickedPopup);
+                if (clickedPopup != popups.peek())
+                {
+                    popups.select(clickedPopup);
+                }
             }
             if (button == 3)
             {
                 mouseDown3 = true;
                 mouseClick3 = currentTicks;
-                
+
 //                currentState = GS_CONTEXT;
-                contextX = mouseX;
-                contextY = mouseY;
+//                contextX = mouseX;
+//                contextY = mouseY;
             }
             break;
         case SDL_MOUSEBUTTONUP:
             if (button == 1)
             {
                 mouseDown1 = false;
+                
+                //printf("%d,%d\n", mouseDragX, mouseDragY);
+                if (mouseDragX != 0 || mouseDragY != 0)
+                {
+                    //printf("%d,%d\n", mouseX, mouseDragX);
+                    popupDrag(clickedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                    mouseDragX = 0;
+                    mouseDragY = 0;
+                }
             }
             if (button == 3)
             {
@@ -763,6 +842,24 @@ int main(int argc, char* args[])
                             break;
                     }
                 }
+                
+                // do this code here for now
+                if (currentState == GS_RUN)
+                {
+                    if (mouseDown1)
+                    {
+                        int mX, mY;
+                        SDL_GetMouseState(&mX, &mY);
+                        if (mX != mouseX || mY != mouseY)
+                        {
+                            //printf("%d,%d\n", mX, mY);
+                            mouseDragX = mX;
+                            mouseDragY = mY;
+                            popupFakeDrag(clickedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                        }
+                    }
+                }
+                
                 
                 // clear screen
                 SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
