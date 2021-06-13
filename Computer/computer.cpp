@@ -11,7 +11,9 @@
 #include "popups.h"
 #include "popup.h"
 #include "icon.h"
+#include "notices.h"
 #include "text.h"
+#include "terminal.h"
 
 Button buttonOK;
 Button buttonCancel;
@@ -39,6 +41,11 @@ unsigned int mouseClick1 = -1;
 bool mouseDown3 = false;
 unsigned int mouseClick3 = -1;
 
+int numIcons = 4;
+int iconSize = 60;
+int iconXOffset = 30;
+int iconYOffset = 60;
+
 bool init();
 
 bool loadMedia();
@@ -58,8 +65,6 @@ void drawShutdownPopup();
 void drawShutdownFadeIn();
 
 void drawShutdownFadeOut();
-
-void drawTermPopup();
 
 void handleKey();
 
@@ -86,6 +91,8 @@ void drawContextMenu();
 PopupType popupClicked(int x, int y);
 
 PopupType popupDragged(int x, int y);
+
+Notices notices;
 
 Popups popups;
 
@@ -116,6 +123,7 @@ Text textTerminal;
 Text textHelp;
 Text textManage;
 
+Terminal terminal;
 Text textTerminalBuffer;
 char termPrompt = '>';
 int termLines = 0;
@@ -128,8 +136,6 @@ std::string bootBuffer = "";
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
 GameState currentState = GS_BOOT;
-
-Popups popupOrder[P_NUMBER_OF_POPUPS];
 
 bool init()
 {
@@ -316,8 +322,6 @@ int iconSelected = -1;
 
 void drawIcons()
 {
-    int iconSize = 60;
-    int numIcons = 4;
     unsigned int iconsToDraw = 4;
     
     if (currentState == GS_DESKTOP)
@@ -336,53 +340,11 @@ void drawIcons()
     // todo: this needs rewriting
     for (int i = 0; i < iconsToDraw; i++)
     {
-        int x = 30;
-        int y = 60+(i*(iconSize+30));
+        int x = iconXOffset;
+        int y = iconYOffset+(i*(iconSize+30));
         int w = iconSize;
         int h = iconSize;
         SDL_Rect outlineRect = { x, y, w, h };
-        
-        if (currentState == GS_RUN)
-        {
-            if (mouseDown1 && mouseX > x && mouseX < x + w && mouseY > y && mouseY < y + h)
-            {
-                iconSelected = i;
-                
-                switch(iconSelected)
-                {
-                    case 0:
-                        if (!popups.exists(P_TERMINAL))
-                        {
-                            popups.push(P_TERMINAL);
-                            popupTerminal.openedTicks = currentTicks;
-                            
-                            termBuffer.clear();
-                            termLines = 0;
-                            termBuffer.push_back(termPrompt);
-                            terminalBufferGenerate();
-                        }
-                        break;
-                    case 1:
-                        if (!popups.exists(P_HELP))
-                        {
-                            popups.push(P_HELP);
-                            popupHelp.openedTicks = currentTicks;
-                        }
-                        break;
-                    case 2:
-                        if (!popups.exists(P_MANAGE))
-                        {
-                            popups.push(P_MANAGE);
-                            popupManage.openedTicks = currentTicks;
-                        }
-                        break;
-                    case 3:
-                        currentState = GS_SHUTDOWN_FADE_IN;
-                        shutdownFadeTicks = currentTicks;
-                        break;
-                }
-            }
-        }
         
         SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, desktopAlpha);
         if (iconSelected == i)
@@ -511,6 +473,7 @@ void drawShutdownFadeOut()
     }
 }
 
+bool showContext = false;
 int contextX;
 int contextY;
 
@@ -521,7 +484,7 @@ void drawContextMenu()
     int itemWidth = 80;
     int itemHeight = 30;
     
-    SDL_Rect fillRect = { contextX, contextY, 15, itemHeight*numItems };
+    SDL_Rect fillRect = { contextX, contextY, 15, (itemHeight*numItems)+1 };
     SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, 0xFF);
     SDL_RenderFillRect(gRenderer, &fillRect);
     
@@ -537,12 +500,18 @@ void drawContextMenu()
     {
         int x = contextX + 15;
         int y = contextY + (i*itemHeight);
-        SDL_Rect rect = { x, y, itemWidth, itemHeight+1 };
+        SDL_Rect rect = { x, y, itemWidth, itemHeight + 1 };
         if (mX > x && mX < x + itemWidth && mY > y && mY < y + itemHeight)
         {
             SDL_SetRenderDrawColor(gRenderer, 0x03, 0x46, 0x25, 0xFF);
             SDL_RenderFillRect(gRenderer, &rect);
         }
+        else
+        {
+            SDL_SetRenderDrawColor(gRenderer, 0x03, 0xFC, 0xA9, 0xFF);
+            SDL_RenderFillRect(gRenderer, &rect);
+        }
+        
         SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, 0xFF);
         SDL_RenderDrawRect(gRenderer, &rect);
     }
@@ -553,24 +522,6 @@ void drawBootBuffer()
     textBootBuffer.x = 10;
     textBootBuffer.y = 10;
     textBootBuffer.draw(gRenderer);
-}
-
-void drawTermPopup()
-{
-    if (popupTerminal.draw(gRenderer, currentTicks))
-    {
-        SDL_Rect fillRect = { popupTerminal.x+5, popupTerminal.y+30+5, popupTerminal.w-(5*2), popupTerminal.h-30-(5*2) };
-        SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
-        SDL_RenderFillRect(gRenderer, &fillRect);
-        
-        textTerminalBuffer.x = popupTerminal.x+5;
-        textTerminalBuffer.y = popupTerminal.y+30+5;
-        textTerminalBuffer.draw(gRenderer);
-    }
-    
-    textTerminal.x = popupTerminal.x+5;
-    textTerminal.y = popupTerminal.y+5;
-    textTerminal.draw(gRenderer);
 }
 
 void drawManagePopup()
@@ -629,47 +580,43 @@ void handleKey(SDL_Keycode keycode)
 {
     PopupType p = popups.peek();
     
-    // global keys
     switch (keycode)
     {
         case SDLK_F1:
             alphaOverride = !alphaOverride;
             break;
-    }
-    
-    if (p == P_NONE)
-    {
-        // "no popups" keys
-        switch (keycode)
-        {
-            case SDLK_ESCAPE:
-                if (currentState == GS_RUN)
+        case SDLK_ESCAPE:
+            if (showContext)
+            {
+                showContext = false;
+            }
+            else
+            {
+                if (p == P_NONE)
                 {
-                    currentState = GS_SHUTDOWN_FADE_IN;
-                    shutdownFadeTicks = currentTicks;
+                    if (currentState == GS_RUN)
+                    {
+                        currentState = GS_SHUTDOWN_FADE_IN;
+                        shutdownFadeTicks = currentTicks;
+                    }
+                    else if (currentState == GS_SHUTDOWN)
+                    {
+                        currentState = GS_SHUTDOWN_FADE_OUT;
+                        shutdownFadeTicks = currentTicks;
+                    }
                 }
-                else if (currentState == GS_SHUTDOWN)
+                else
                 {
-                    currentState = GS_SHUTDOWN_FADE_OUT;
-                    shutdownFadeTicks = currentTicks;
+                    popups.remove(p);
                 }
-                break;
-        }
-    }
-    else
-    {
-        // "popups shown keys"
-        
-        switch (keycode)
-        {
-            case SDLK_ESCAPE:
-                //printf("%d\n", p);
-                popups.remove(p);
-                break;
-            default:
-                handleKeyPopup(p, keycode);
-                break;
-        }
+            } 
+            break;
+        default:
+            if (p != P_NONE)
+            {
+               handleKeyPopup(p, keycode);
+            }
+            break;
     }
 }
 
@@ -756,6 +703,12 @@ void terminalBufferProcess()
     {
         termBuffer.append(" quit\r");
         termLines+=1;
+    }
+    else if (command.compare("notice") == 0)
+    {
+        termBuffer.append("ok\r");
+        termLines+=1;
+        notices.add();
     }
     else if (command.compare("reboot") == 0)
     {
@@ -879,21 +832,88 @@ void handleMouse(unsigned int type, int button)
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
                 
+                // TODO: just always hide it for now, fix this later
+                showContext = false;
+                
+                //TODO: check for notice clicked, if so don't check for popup clicked/dragged
                 PopupType selectedPopup = popupClicked(mouseX, mouseY);
-                draggedPopup = popupDragged(mouseX, mouseY);
-                //printf("%d\n", selectedPopup);
-                if (selectedPopup != popups.peek())
+                if (selectedPopup != P_NONE)
                 {
-                    popups.select(selectedPopup);
+                    // popup clicked
+                    draggedPopup = popupDragged(mouseX, mouseY);
+                    //printf("%d\n", selectedPopup);
+                    if (selectedPopup != popups.peek())
+                    {
+                        popups.select(selectedPopup);
+                    }
+                }
+                else
+                {
+                    // no popup clicked
+                    for (int i = 0; i < numIcons; i++)
+                    {
+                        int iconX = iconXOffset;
+                        int iconY = iconYOffset+(i*(iconSize+30));
+                        int iconW = iconSize;
+                        int iconH = iconSize;
+                        if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
+                        {
+                            iconSelected = i;
+                            break;
+                        }
+                    }
+                    if (iconSelected != -1)
+                    {
+                        // icon clicked
+                        switch(iconSelected)
+                        {
+                            case 0:
+                                if (!popups.exists(P_TERMINAL))
+                                {
+                                    popups.push(P_TERMINAL);
+                                    popupTerminal.openedTicks = currentTicks;
+                                    
+                                    termBuffer.clear();
+                                    termLines = 0;
+                                    termBuffer.push_back(termPrompt);
+                                    terminalBufferGenerate();
+                                }
+                                break;
+                            case 1:
+                                if (!popups.exists(P_HELP))
+                                {
+                                    popups.push(P_HELP);
+                                    popupHelp.openedTicks = currentTicks;
+                                }
+                                break;
+                            case 2:
+                                if (!popups.exists(P_MANAGE))
+                                {
+                                    popups.push(P_MANAGE);
+                                    popupManage.openedTicks = currentTicks;
+                                }
+                                break;
+                            case 3:
+                                currentState = GS_SHUTDOWN_FADE_IN;
+                                shutdownFadeTicks = currentTicks;
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        // no icon clicked
+                    }
                 }
             }
             if (button == 3)
             {
                 mouseDown3 = true;
                 mouseClick3 = currentTicks;
-
-//                contextX = mouseX;
-//                contextY = mouseY;
+                
+                //TODO: ensure we haven't clicked an icon or popup infront
+                showContext = true;
+                contextX = mouseX;
+                contextY = mouseY;
             }
             break;
         case SDL_MOUSEBUTTONUP:
@@ -1064,17 +1084,12 @@ int main(int argc, char* args[])
                     drawIcons();
                 }
                 
-//                if (currentState == GS_CONTEXT)
-//                {
-//                    drawContextMenu();
-//                }
-                
                 for (int i = P_NUMBER_OF_POPUPS; i > -1; i--)
                 {
                     switch (popups.order[i])
                     {
                         case P_TERMINAL:
-                            drawTermPopup();
+                            terminal.draw(gRenderer, popupTerminal, textTerminal, textTerminalBuffer, currentTicks);
                             break;
                         case P_MANAGE:
                             drawManagePopup();
@@ -1083,6 +1098,13 @@ int main(int argc, char* args[])
                             drawHelpPopup();
                             break;
                     }
+                }
+                
+                notices.draw(gRenderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+                
+                if (showContext)
+                {
+                    drawContextMenu();
                 }
                 
                 // shutdown drawn last, on top of everything else
