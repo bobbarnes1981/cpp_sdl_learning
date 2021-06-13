@@ -677,6 +677,7 @@ void popupFakeDrag(PopupType popup, int x, int y)
     {
         case P_HELP:
             popupHelp.fakeDrag(x, y);
+            break;
         case P_MANAGE:
             popupManage.fakeDrag(x, y);
             break;
