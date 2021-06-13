@@ -13,7 +13,7 @@ Popups::~Popups()
 
 bool Popups::exists(PopupType popup)
 {
-    for (int i = 0; i < P_NUMBER_OF_POPUPS - 1; i++)
+    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
     {
         if (order[i] == popup)
         {
@@ -31,6 +31,7 @@ PopupType Popups::pop()
     {
         order[i] = order[i+1];
     }
+    order[P_NUMBER_OF_POPUPS-1] = P_NONE;
     
     return p;
 }
@@ -49,32 +50,6 @@ void Popups::push(PopupType popup)
             order[i] = order[i-1];
         }
         order[0] = popup;
-        
-        switch(popup)
-        {
-            case P_TERMINAL:
-                order[0] = P_TERMINAL;
-                
-//                currentState = GS_TERM;
-//                termBuffer.clear();
-//                termLines = 0;
-//                termBuffer.push_back(termPrompt);
-//                terminalBufferGenerate();
-//                popupTerminal.openedTicks = currentTicks;
-                break;
-            case P_HELP:
-                order[0] = P_HELP;
-                
-//                currentState = GS_HELP;
-//                popupHelp.openedTicks = currentTicks;
-                break;
-            case P_MANAGE:
-                order[0] = P_MANAGE;
-                
-//                currentState = GS_MANAGE;
-//                popupManage.openedTicks = currentTicks;
-                break;
-        }
     }
 }
 
@@ -97,9 +72,10 @@ void Popups::remove(PopupType popup)
             {
                 order[i] = P_NONE;
             }
-            if (i > 0 && order[i-1] == P_NONE)
+            if (order[i] == P_NONE && i < P_NUMBER_OF_POPUPS-1)
             {
-                order[i-1] = order[i];
+                order[i] = order[i+1];
+                order[i+1] = P_NONE;
             }
         }
     }

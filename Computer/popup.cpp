@@ -48,6 +48,11 @@ bool Popup::isClicked(int mX, int mY)
     return x < mX && x + w > mX && y < mY && y + h > mY;
 }
 
+bool Popup::isDragged(int mX, int mY)
+{
+    return x < mX && x + w > mX && y < mY && y + 30 > mY;
+}
+
 void Popup::drag(int offsetX, int offsetY)
 {
     x -= offsetX;

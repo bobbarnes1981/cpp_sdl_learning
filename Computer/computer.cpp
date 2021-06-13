@@ -27,7 +27,7 @@ const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
 
-PopupType clickedPopup = P_NONE;
+PopupType draggedPopup = P_NONE;
 int mouseX = -1;
 int mouseY = -1;
 int mouseDragX = 0;
@@ -57,6 +57,8 @@ void drawTermPopup();
 
 void handleKey();
 
+void handleKeyPopup(PopupType popup, SDL_Keycode keycode);
+
 void handleMouse(unsigned int type, int button);
 
 void generateText();
@@ -74,6 +76,10 @@ void bootBufferGenerate();
 void boot();
 
 void drawContextMenu();
+
+PopupType popupClicked(int x, int y);
+
+PopupType popupDragged(int x, int y);
 
 Popups popups;
 
@@ -333,13 +339,30 @@ void drawIcons()
                 switch(iconSelected)
                 {
                     case 0:
-                        popups.push(P_TERMINAL);
+                        if (!popups.exists(P_TERMINAL))
+                        {
+                            popups.push(P_TERMINAL);
+                            popupTerminal.openedTicks = currentTicks;
+                            
+                            termBuffer.clear();
+                            termLines = 0;
+                            termBuffer.push_back(termPrompt);
+                            terminalBufferGenerate();
+                        }
                         break;
                     case 1:
-                        popups.push(P_HELP);
+                        if (!popups.exists(P_HELP))
+                        {
+                            popups.push(P_HELP);
+                            popupHelp.openedTicks = currentTicks;
+                        }
                         break;
                     case 2:
-                        popups.push(P_MANAGE);
+                        if (!popups.exists(P_MANAGE))
+                        {
+                            popups.push(P_MANAGE);
+                            popupManage.openedTicks = currentTicks;
+                        }
                         break;
                     case 3:
                         currentState = GS_SHUTDOWN;
@@ -515,27 +538,56 @@ void drawHelpPopup()
 
 void handleKey(SDL_Keycode keycode)
 {
-    // todo: send key to top popup?
+    PopupType p = popups.peek();
+    
+    // global keys
     switch (keycode)
     {
-        case SDLK_ESCAPE:
-            if (currentState == GS_RUN)
-            {
-                currentState = GS_SHUTDOWN;
-            }
-            else if (currentState == GS_SHUTDOWN)
-            {
-                currentState = GS_RUN;
-            }
-            break;
         case SDLK_F1:
             alphaOverride = !alphaOverride;
             break;
-        default:
-//            if (currentState == GS_TERM)
-//            {
-//                terminalBufferUpdate(keycode);
-//            }
+    }
+    
+    if (p == P_NONE)
+    {
+        // "no popups" keys
+        switch (keycode)
+        {
+            case SDLK_ESCAPE:
+                if (currentState == GS_RUN)
+                {
+                    currentState = GS_SHUTDOWN;
+                }
+                else if (currentState == GS_SHUTDOWN)
+                {
+                    currentState = GS_RUN;
+                }
+                break;
+        }
+    }
+    else
+    {
+        // "popups shown keys"
+        
+        switch (keycode)
+        {
+            case SDLK_ESCAPE:
+                //printf("%d\n", p);
+                popups.remove(p);
+                break;
+            default:
+                handleKeyPopup(p, keycode);
+                break;
+        }
+    }
+}
+
+void handleKeyPopup(PopupType popup, SDL_Keycode keycode)
+{
+    switch (popup)
+    {
+        case P_TERMINAL:
+            terminalBufferUpdate(keycode);
             break;
     }
 }
@@ -606,7 +658,8 @@ void terminalBufferProcess()
     std::string command = termBuffer.substr(loc+2, termBuffer.length()-(loc+2+1));
     if (command.compare("quit") == 0)
     {
-        currentState = GS_RUN;
+        // just assume terminal is active
+        popups.remove(P_TERMINAL);
     }
     else if (command.compare("help") == 0)
     {
@@ -654,6 +707,36 @@ PopupType popupClicked(int x, int y)
     return P_NONE;
 }
 
+PopupType popupDragged(int x, int y)
+{
+    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
+    {
+        switch (popups.order[i])
+        {
+            case P_HELP:
+                if (popupHelp.isDragged(x, y))
+                {
+                    return P_HELP;
+                }
+                break;
+            case P_MANAGE:
+                if (popupManage.isDragged(x, y))
+                {
+                    return P_MANAGE;
+                }
+                break;
+            case P_TERMINAL:
+                if (popupTerminal.isDragged(x, y))
+                {
+                    return P_TERMINAL;
+                }
+                break;
+        }
+    }
+    
+    return P_NONE;
+}
+
 void popupDrag(PopupType popup, int x, int y)
 {
     //printf("%d,%d\n", x, y);
@@ -661,12 +744,15 @@ void popupDrag(PopupType popup, int x, int y)
     {
         case P_HELP:
             popupHelp.drag(x, y);
+            popupHelp.openedTicks = currentTicks;
             break;
         case P_MANAGE:
             popupManage.drag(x, y);
+            popupManage.openedTicks = currentTicks;
             break;
         case P_TERMINAL:
             popupTerminal.drag(x, y);
+            popupTerminal.openedTicks = currentTicks;
             break;
     }
 }
@@ -701,11 +787,12 @@ void handleMouse(unsigned int type, int button)
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
                 
-                clickedPopup = popupClicked(mouseX, mouseY);
-                //printf("%d\n", clickedPopup);
-                if (clickedPopup != popups.peek())
+                PopupType selectedPopup = popupClicked(mouseX, mouseY);
+                draggedPopup = popupDragged(mouseX, mouseY);
+                //printf("%d\n", selectedPopup);
+                if (selectedPopup != popups.peek())
                 {
-                    popups.select(clickedPopup);
+                    popups.select(selectedPopup);
                 }
             }
             if (button == 3)
@@ -713,7 +800,6 @@ void handleMouse(unsigned int type, int button)
                 mouseDown3 = true;
                 mouseClick3 = currentTicks;
 
-//                currentState = GS_CONTEXT;
 //                contextX = mouseX;
 //                contextY = mouseY;
             }
@@ -727,7 +813,7 @@ void handleMouse(unsigned int type, int button)
                 if (mouseDragX != 0 || mouseDragY != 0)
                 {
                     //printf("%d,%d\n", mouseX, mouseDragX);
-                    popupDrag(clickedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                    popupDrag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
                     mouseDragX = 0;
                     mouseDragY = 0;
                 }
@@ -856,7 +942,7 @@ int main(int argc, char* args[])
                             //printf("%d,%d\n", mX, mY);
                             mouseDragX = mX;
                             mouseDragY = mY;
-                            popupFakeDrag(clickedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                            popupFakeDrag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
                         }
                     }
                 }

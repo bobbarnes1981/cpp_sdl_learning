@@ -19,6 +19,7 @@ class Popup : Entity
         ~Popup();
         bool draw(SDL_Renderer* renderer, unsigned int currentTicks);
         bool isClicked(int mX, int mY);
+        bool isDragged(int mX, int mY);
         void drag(int offsetX, int offsetY);
         void fakeDrag(int offsetX, int offsetY);
 };
