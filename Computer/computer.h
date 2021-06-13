@@ -13,10 +13,6 @@ enum GameState
     GS_DESKTOP,
     GS_RUN,
     GS_SHUTDOWN,
-    GS_TERM,
-    GS_HELP,
-    GS_MANAGE,
-    GS_CONTEXT,
     GS_QUIT
 };
 

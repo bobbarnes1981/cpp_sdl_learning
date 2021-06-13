@@ -1,5 +1,5 @@
 #OBJS specifies which files to compile as part of the project
-OBJS = entity.cpp button.cpp popup.cpp icon.cpp text.cpp computer.cpp
+OBJS = entity.cpp button.cpp popups.cpp popup.cpp icon.cpp text.cpp computer.cpp
 
 #CC specifies which compiler we're using
 CC = g++

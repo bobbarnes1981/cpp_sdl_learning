@@ -8,6 +8,7 @@
 #include "computer.h"
 #include "entity.h"
 #include "button.h"
+#include "popups.h"
 #include "popup.h"
 #include "icon.h"
 #include "text.h"
@@ -71,6 +72,8 @@ void boot();
 
 void drawContextMenu();
 
+Popups popups;
+
 unsigned int startTime = 0;
 
 bool alphaOverride = false;
@@ -104,6 +107,8 @@ std::string bootBuffer = "";
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
 GameState currentState = GS_BOOT;
+
+Popups popupOrder[P_NUMBER_OF_POPUPS];
 
 bool init()
 {
@@ -307,6 +312,7 @@ void drawIcons()
         }
     }
     
+    // todo: this needs rewriting
     for (int i = 0; i < iconsToDraw; i++)
     {
         int x = 30;
@@ -324,20 +330,13 @@ void drawIcons()
                 switch(iconSelected)
                 {
                     case 0:
-                        currentState = GS_TERM;
-                        termBuffer.clear();
-                        termLines = 0;
-                        termBuffer.push_back(termPrompt);
-                        terminalBufferGenerate();
-                        popupTerminal.openedTicks = currentTicks;
+                        popups.push(P_TERMINAL);
                         break;
                     case 1:
-                        currentState = GS_HELP;
-                        popupHelp.openedTicks = currentTicks;
+                        popups.push(P_HELP);
                         break;
                     case 2:
-                        currentState = GS_MANAGE;
-                        popupManage.openedTicks = currentTicks;
+                        popups.push(P_MANAGE);
                         break;
                     case 3:
                         currentState = GS_SHUTDOWN;
@@ -393,6 +392,10 @@ bool buttonCancelClicked = false;
 
 void drawShutdownPopup()
 {
+    SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
+    SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0x80);
+    SDL_RenderFillRect(gRenderer, &fillRect);
+    
     if (popupShutdown.draw(gRenderer, currentTicks))
     {
         bool newState = buttonOK.draw(gRenderer, mouseDown1, mouseX, mouseY);
@@ -509,7 +512,7 @@ void drawHelpPopup()
 
 void handleKey(SDL_Keycode keycode)
 {
-    //printf("%d\n", keycode);
+    // todo: send key to top popup?
     switch (keycode)
     {
         case SDLK_ESCAPE:
@@ -517,7 +520,7 @@ void handleKey(SDL_Keycode keycode)
             {
                 currentState = GS_SHUTDOWN;
             }
-            else if (currentState == GS_SHUTDOWN || currentState == GS_TERM || currentState == GS_HELP || currentState == GS_MANAGE || currentState == GS_CONTEXT)
+            else if (currentState == GS_SHUTDOWN)
             {
                 currentState = GS_RUN;
             }
@@ -526,10 +529,10 @@ void handleKey(SDL_Keycode keycode)
             alphaOverride = !alphaOverride;
             break;
         default:
-            if (currentState == GS_TERM)
-            {
-                terminalBufferUpdate(keycode);
-            }
+//            if (currentState == GS_TERM)
+//            {
+//                terminalBufferUpdate(keycode);
+//            }
             break;
     }
 }
@@ -639,7 +642,7 @@ void handleMouse(unsigned int type, int button)
                 mouseDown3 = true;
                 mouseClick3 = currentTicks;
                 
-                currentState = GS_CONTEXT;
+//                currentState = GS_CONTEXT;
                 contextX = mouseX;
                 contextY = mouseY;
             }
@@ -775,24 +778,25 @@ int main(int argc, char* args[])
                     drawIcons();
                 }
                 
-                if (currentState == GS_TERM)
-                {
-                    drawTermPopup();
-                }
+//                if (currentState == GS_CONTEXT)
+//                {
+//                    drawContextMenu();
+//                }
                 
-                if (currentState == GS_HELP)
+                for (int i = P_NUMBER_OF_POPUPS; i > -1; i--)
                 {
-                    drawHelpPopup();
-                }
-                
-                if (currentState == GS_MANAGE)
-                {
-                    drawManagePopup();
-                }
-                
-                if (currentState == GS_CONTEXT)
-                {
-                    drawContextMenu();
+                    switch (popups.order[i])
+                    {
+                        case P_TERMINAL:
+                            drawTermPopup();
+                            break;
+                        case P_MANAGE:
+                            drawManagePopup();
+                            break;
+                        case P_HELP:
+                            drawHelpPopup();
+                            break;
+                    }
                 }
                 
                 // shutdown drawn last, on top of everything else
