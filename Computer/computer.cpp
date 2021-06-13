@@ -1,6 +1,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
+#include <SDL_mixer.h>
 #include <stdio.h>
 #include <string>
 #include <cmath>
@@ -24,6 +25,13 @@ Popup popupShutdown;
 Popup popupTerminal;
 Popup popupHelp;
 Popup popupManage;
+
+Mix_Chunk* soundStartup = NULL;
+Mix_Chunk* soundShutdown = NULL;
+Mix_Chunk* soundNotice = NULL;
+Mix_Chunk* soundError = NULL;
+Mix_Chunk* soundPopupRemove = NULL;
+Mix_Chunk* soundDesktop = NULL;
 
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
@@ -141,7 +149,7 @@ bool init()
 {
     bool success = true;
     
-    if (SDL_Init(SDL_INIT_VIDEO) < 0)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0)
     {
         printf("SDL could not initialise! SDL_Error: %s\n", SDL_GetError());
         success = false;
@@ -183,6 +191,12 @@ bool init()
                     success = false;
                 }
                 
+                if (Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0)
+                {
+                    printf("SDL_mixer could not initialise! SDL_mixer Error: %s\n", Mix_GetError());
+                    success = false;
+                }
+                
                 if (TTF_Init() == -1)
                 {
                     printf("SDL_ttf could not initialise! SDL_ttf Error: %s\n", TTF_GetError());
@@ -206,6 +220,48 @@ bool loadMedia()
         success = false;
     }
 
+    soundStartup = Mix_LoadWAV("startup.wav" );
+    if (soundStartup == NULL )
+    {
+        printf("Failed to load startup sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+
+    soundShutdown = Mix_LoadWAV("shutdown.wav" );
+    if (soundShutdown == NULL )
+    {
+        printf("Failed to load shutdown sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+
+    soundNotice = Mix_LoadWAV("notice.wav" );
+    if (soundNotice == NULL )
+    {
+        printf("Failed to load notice sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+
+    soundError = Mix_LoadWAV("error.wav" );
+    if (soundError == NULL )
+    {
+        printf("Failed to load error sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+    
+    soundPopupRemove = Mix_LoadWAV("popup_remove.wav" );
+    if (soundPopupRemove == NULL )
+    {
+        printf("Failed to load popup_remove sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+    
+    soundDesktop = Mix_LoadWAV("desktop.wav" );
+    if (soundDesktop == NULL )
+    {
+        printf("Failed to load desktop sound effect! SDL_mixer Error: %s\n", Mix_GetError());
+        success = false;
+    }
+    
     return success;
 }
 
@@ -219,6 +275,25 @@ void close()
     TTF_CloseFont(gFont);
     gFont = NULL;
     
+    Mix_FreeChunk(soundStartup);
+    soundStartup = NULL;
+    
+    Mix_FreeChunk(soundShutdown);
+    soundShutdown = NULL;
+    
+    Mix_FreeChunk(soundNotice);
+    soundShutdown = NULL;
+    
+    Mix_FreeChunk(soundError);
+    soundError = NULL;
+    
+    Mix_FreeChunk(soundPopupRemove);
+    soundPopupRemove = NULL;
+    
+    Mix_FreeChunk(soundDesktop);
+    soundDesktop = NULL;
+    
+    Mix_Quit();
     TTF_Quit();
     IMG_Quit();
     SDL_Quit();
@@ -269,6 +344,8 @@ void drawBoot()
     drawBootBuffer();
 }
 
+bool startupPlayed = false;
+
 void drawDesktop()
 {
     desktopAlpha = 0xFF;
@@ -289,6 +366,11 @@ void drawDesktop()
             else
             {
                 // boot text
+                if (startupPlayed == false)
+                {
+                    Mix_PlayChannel(-1, soundStartup, 0);
+                    startupPlayed = true;
+                }
             }
         }
         else
@@ -328,6 +410,7 @@ void drawIcons()
     {
         if (currentTicks > BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN + DESKTOP_ICON_IN)
         {
+            Mix_PlayChannel(-1, soundDesktop, 0);
             currentState = GS_RUN;
         }
         else
@@ -607,6 +690,7 @@ void handleKey(SDL_Keycode keycode)
                 }
                 else
                 {
+                    Mix_PlayChannel(-1, soundPopupRemove, 0);
                     popups.remove(p);
                 }
             } 
@@ -708,6 +792,7 @@ void terminalBufferProcess()
     {
         termBuffer.append("ok\r");
         termLines+=1;
+        Mix_PlayChannel(-1, soundNotice, 0);
         notices.add();
     }
     else if (command.compare("reboot") == 0)
@@ -719,6 +804,7 @@ void terminalBufferProcess()
     {
         termBuffer.append("error\r");
         termLines+=1;
+        Mix_PlayChannel(-1, soundError, 0);
     }
 }
 
@@ -961,6 +1047,7 @@ void generateText()
 
 void boot()
 {
+    startupPlayed = false;
     bootBuffer.clear();
     bootLines = 0;
     startTime = currentTicks; // SDL_GetTicks();
@@ -1132,6 +1219,12 @@ int main(int argc, char* args[])
         }
     }
     
+    Mix_PlayChannel(-1, soundShutdown, 0);
+    while (Mix_Playing(-1) != 0)
+    {
+        SDL_Delay(200);
+    }
+
     close();
     
     return 0;
