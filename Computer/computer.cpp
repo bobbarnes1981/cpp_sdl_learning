@@ -16,6 +16,7 @@
 #include "notices.h"
 #include "text.h"
 #include "terminal.h"
+#include "timedevent.h"
 
 Context context;
 
@@ -35,6 +36,8 @@ Mix_Chunk* soundNotice = NULL;
 Mix_Chunk* soundError = NULL;
 Mix_Chunk* soundPopupRemove = NULL;
 Mix_Chunk* soundDesktop = NULL;
+
+TimedEvent eventFirstNotice;
 
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
@@ -96,6 +99,8 @@ void bootBufferUpdate(std::string line);
 void bootBufferGenerate();
 
 void boot();
+
+void addNotice(std::string text, NoticeType type);
 
 PopupType popupClicked(int x, int y);
 
@@ -750,8 +755,7 @@ void terminalBufferProcess()
     {
         termBuffer.append("ok\r");
         termLines+=1;
-        Mix_PlayChannel(-1, soundNotice, 0);
-        notices.add();
+        addNotice("testing", NT_INFO);
     }
     else if (command.compare("reboot") == 0)
     {
@@ -764,6 +768,12 @@ void terminalBufferProcess()
         termLines+=1;
         Mix_PlayChannel(-1, soundError, 0);
     }
+}
+
+void addNotice(std::string text, NoticeType type)
+{
+    Mix_PlayChannel(-1, soundNotice, 0);
+    notices.add();
 }
 
 PopupType popupClicked(int x, int y)
@@ -1078,6 +1088,9 @@ int main(int argc, char* args[])
     buttonRArrow.w = 30;
     buttonRArrow.h = 30;
 
+    eventFirstNotice.start = currentTicks;
+    eventFirstNotice.delay = 5000;
+
     if (!init())
     {
         printf("Failed to initialise\n");
@@ -1119,6 +1132,13 @@ int main(int argc, char* args[])
                             handleMouse(e.type, e.button.button);
                             break;
                     }
+                }
+                
+                // timed events
+                if (!eventFirstNotice.triggered && eventFirstNotice.delay > currentTicks - eventFirstNotice.delay)
+                {
+                    eventFirstNotice.triggered = true;
+                    addNotice("welcome", NT_INFO);
                 }
                 
                 // do this code here for now

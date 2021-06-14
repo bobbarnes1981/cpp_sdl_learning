@@ -1,6 +1,13 @@
 #ifndef __h_notices
 #define __h_notices
 
+enum NoticeType
+{
+    NT_NONE,
+    NT_INFO,
+    NT_CRITICAL
+};
+
 class Notices
 {
     public:
