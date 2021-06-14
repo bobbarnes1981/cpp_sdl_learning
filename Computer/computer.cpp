@@ -28,10 +28,6 @@ Button buttonLArrow;
 Button buttonRArrow;
 
 Popup popupShutdown;
-Popup popupTerminal;
-Popup popupHelp;
-Popup popupBrowser;
-Popup popupManage;
 
 Mix_Chunk* soundStartup = NULL;
 Mix_Chunk* soundShutdown = NULL;
@@ -96,9 +92,6 @@ void bootBufferGenerate();
 void boot();
 
 void addNotice(std::string text, NoticeType type);
-
-PopupType popupClicked(int x, int y);
-PopupType popupDragged(int x, int y);
 
 Notices notices;
 
@@ -514,13 +507,13 @@ void drawShutdownPopup()
 
 void drawBrowserPopup()
 {
-    if (popupBrowser.draw(gRenderer, currentTicks))
+    if (popups.popups[P_BROWSER].draw(gRenderer, currentTicks))
     {
         
     }
     
-    textBrowser.x = popupBrowser.x+5;
-    textBrowser.y = popupBrowser.y+5;
+    textBrowser.x = popups.popups[P_BROWSER].x+5;
+    textBrowser.y = popups.popups[P_BROWSER].y+5;
     textBrowser.draw(gRenderer);
 }
 
@@ -584,29 +577,29 @@ void drawBootBuffer()
 
 void drawManagePopup()
 {
-    if (popupManage.draw(gRenderer, currentTicks))
+    if (popups.popups[P_MANAGE].draw(gRenderer, currentTicks))
     {
         
     }
     
-    textManage.x = popupManage.x+5;
-    textManage.y = popupManage.y+5;
+    textManage.x = popups.popups[P_MANAGE].x+5;
+    textManage.y = popups.popups[P_MANAGE].y+5;
     textManage.draw(gRenderer);
 }
 
 void drawHelpPopup()
 {
-    if (popupHelp.draw(gRenderer, currentTicks))
+    if (popups.popups[P_HELP].draw(gRenderer, currentTicks))
     {
-        SDL_Rect fillRect = { popupHelp.x+5, popupHelp.y+30+5, popupHelp.w-(5*2), popupHelp.h-(buttonLArrow.h+10)-30-(5*2) };
+        SDL_Rect fillRect = { popups.popups[P_HELP].x+5, popups.popups[P_HELP].y+30+5, popups.popups[P_HELP].w-(5*2), popups.popups[P_HELP].h-(buttonLArrow.h+10)-30-(5*2) };
         SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
         SDL_RenderFillRect(gRenderer, &fillRect);
         
-        buttonLArrow.x = popupHelp.x + 10;
-        buttonLArrow.y = popupHelp.y + popupHelp.h - (10 + buttonLArrow.h);
+        buttonLArrow.x = popups.popups[P_HELP].x + 10;
+        buttonLArrow.y = popups.popups[P_HELP].y + popups.popups[P_HELP].h - (10 + buttonLArrow.h);
         
-        buttonRArrow.x = popupHelp.x + popupHelp.w - (10 + buttonRArrow.w);
-        buttonRArrow.y = popupHelp.y + popupHelp.h - (10 + buttonRArrow.h);
+        buttonRArrow.x = popups.popups[P_HELP].x + popups.popups[P_HELP].w - (10 + buttonRArrow.w);
+        buttonRArrow.y = popups.popups[P_HELP].y + popups.popups[P_HELP].h - (10 + buttonRArrow.h);
         
         bool pressed = buttonLArrow.update(mouseDown1, mouseX, mouseY);
         buttonLArrow.draw(gRenderer);
@@ -629,8 +622,8 @@ void drawHelpPopup()
         }
     }
     
-    textHelp.x = popupHelp.x+5;
-    textHelp.y = popupHelp.y+5;
+    textHelp.x = popups.popups[P_HELP].x+5;
+    textHelp.y = popups.popups[P_HELP].y+5;
     textHelp.draw(gRenderer);
 }
 
@@ -650,23 +643,23 @@ void handleKey(SDL_Keycode keycode)
             }
             else
             {
-                if (p == P_NONE)
+                if (currentState == GS_RUN)
                 {
-                    if (currentState == GS_RUN)
+                    if (p == P_NONE)
                     {
                         currentState = GS_SHUTDOWN_FADE_IN;
                         shutdownFadeTicks = currentTicks;
                     }
-                    else if (currentState == GS_SHUTDOWN)
+                    else
                     {
-                        currentState = GS_SHUTDOWN_FADE_OUT;
-                        shutdownFadeTicks = currentTicks;
+                        Mix_PlayChannel(-1, soundPopupRemove, 0);
+                        popups.remove(p);
                     }
                 }
-                else
+                else if (currentState == GS_SHUTDOWN)
                 {
-                    Mix_PlayChannel(-1, soundPopupRemove, 0);
-                    popups.remove(p);
+                    currentState = GS_SHUTDOWN_FADE_OUT;
+                    shutdownFadeTicks = currentTicks;
                 }
             } 
             break;
@@ -746,7 +739,7 @@ void terminalBufferGenerate()
     }
     
     SDL_Color green = { 0x00, 0xFF, 0x00 };
-    textTerminalBuffer.generateWrapped(gRenderer, gFont, green, termBuffer.c_str(), popupTerminal.w-(5*2));
+    textTerminalBuffer.generateWrapped(gRenderer, gFont, green, termBuffer.c_str(), popups.popups[P_TERMINAL].w-(5*2));
 }
 
 void terminalBufferProcess()
@@ -789,121 +782,6 @@ void addNotice(std::string text, NoticeType type)
     notices.add(gRenderer, gFont, text, type);
 }
 
-PopupType popupClicked(int x, int y)
-{
-    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
-    {
-        switch (popups.order[i])
-        {
-            case P_HELP:
-                if (popupHelp.isClicked(x, y))
-                {
-                    return P_HELP;
-                }
-                break;
-            case P_MANAGE:
-                if (popupManage.isClicked(x, y))
-                {
-                    return P_MANAGE;
-                }
-                break;
-            case P_TERMINAL:
-                if (popupTerminal.isClicked(x, y))
-                {
-                    return P_TERMINAL;
-                }
-                break;
-            case P_BROWSER:
-                if (popupBrowser.isClicked(x, y))
-                {
-                    return P_BROWSER;
-                }
-                break;
-        }
-    }
-    
-    return P_NONE;
-}
-
-PopupType popupDragged(int x, int y)
-{
-    for (int i = 0; i < P_NUMBER_OF_POPUPS; i++)
-    {
-        switch (popups.order[i])
-        {
-            case P_HELP:
-                if (popupHelp.isDragged(x, y))
-                {
-                    return P_HELP;
-                }
-                break;
-            case P_MANAGE:
-                if (popupManage.isDragged(x, y))
-                {
-                    return P_MANAGE;
-                }
-                break;
-            case P_TERMINAL:
-                if (popupTerminal.isDragged(x, y))
-                {
-                    return P_TERMINAL;
-                }
-                break;
-            case P_BROWSER:
-                if (popupBrowser.isDragged(x, y))
-                {
-                    return P_BROWSER;
-                }
-                break;
-        }
-    }
-    
-    return P_NONE;
-}
-
-void popupDrag(PopupType popup, int x, int y)
-{
-    //printf("%d,%d\n", x, y);
-    switch (popup)
-    {
-        case P_HELP:
-            popupHelp.drag(x, y);
-            popupHelp.openedTicks = currentTicks;
-            break;
-        case P_MANAGE:
-            popupManage.drag(x, y);
-            popupManage.openedTicks = currentTicks;
-            break;
-        case P_TERMINAL:
-            popupTerminal.drag(x, y);
-            popupTerminal.openedTicks = currentTicks;
-            break;
-        case P_BROWSER:
-            popupBrowser.drag(x, y);
-            popupBrowser.openedTicks = currentTicks;
-            break;
-    }
-}
-
-void popupFakeDrag(PopupType popup, int x, int y)
-{
-    switch (popup)
-    {
-        case P_HELP:
-            popupHelp.fakeDrag(x, y);
-            break;
-        case P_MANAGE:
-            popupManage.fakeDrag(x, y);
-            break;
-        case P_TERMINAL:
-            popupTerminal.fakeDrag(x, y);
-            break;
-        case P_BROWSER:
-            popupBrowser.fakeDrag(x, y);
-            break;
-    }
-}
-
 void handleMouse(unsigned int type, int button)
 {
     switch(type)
@@ -940,11 +818,11 @@ void handleMouse(unsigned int type, int button)
                         else
                         {
                             // notice not clicked
-                            PopupType selectedPopup = popupClicked(mouseX, mouseY);
+                            PopupType selectedPopup = popups.clicked(mouseX, mouseY);
                             if (selectedPopup != P_NONE)
                             {
                                 // popup clicked
-                                draggedPopup = popupDragged(mouseX, mouseY);
+                                draggedPopup = popups.dragged(mouseX, mouseY);
                                 //printf("%d\n", selectedPopup);
                                 if (selectedPopup != popups.peek())
                                 {
@@ -975,7 +853,7 @@ void handleMouse(unsigned int type, int button)
                                             if (!popups.exists(P_TERMINAL))
                                             {
                                                 popups.push(P_TERMINAL);
-                                                popupTerminal.openedTicks = currentTicks;
+                                                popups.popups[P_TERMINAL].openedTicks = currentTicks;
                                                 
                                                 termBuffer.clear();
                                                 termLines = 0;
@@ -987,21 +865,21 @@ void handleMouse(unsigned int type, int button)
                                             if (!popups.exists(P_HELP))
                                             {
                                                 popups.push(P_HELP);
-                                                popupHelp.openedTicks = currentTicks;
+                                                popups.popups[P_HELP].openedTicks = currentTicks;
                                             }
                                             break;
                                         case 2:
                                             if (!popups.exists(P_MANAGE))
                                             {
                                                 popups.push(P_MANAGE);
-                                                popupManage.openedTicks = currentTicks;
+                                                popups.popups[P_MANAGE].openedTicks = currentTicks;
                                             }
                                             break;
                                         case 3:
                                             if (!popups.exists(P_BROWSER))
                                             {
                                                 popups.push(P_BROWSER);
-                                                popupBrowser.openedTicks = currentTicks;
+                                                popups.popups[P_BROWSER].openedTicks = currentTicks;
                                             }
                                             break;
                                         case 4:
@@ -1042,7 +920,7 @@ void handleMouse(unsigned int type, int button)
                 if (mouseDragX != 0 || mouseDragY != 0)
                 {
                     //printf("%d,%d\n", mouseX, mouseDragX);
-                    popupDrag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                    popups.drag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY, currentTicks);
                     mouseDragX = 0;
                     mouseDragY = 0;
                 }
@@ -1089,29 +967,29 @@ void boot()
 
 int main(int argc, char* args[])
 {
-    popupTerminal.w = 500;
-    popupTerminal.h = 300;
-    popupTerminal.x = (SCREEN_WIDTH/2)-popupTerminal.w/2;
-    popupTerminal.y = (SCREEN_HEIGHT/2)-popupTerminal.h/2;
-    popupTerminal.openedTicks = 0;
+    popups.popups[P_TERMINAL].w = 500;
+    popups.popups[P_TERMINAL].h = 300;
+    popups.popups[P_TERMINAL].x = (SCREEN_WIDTH/2)-popups.popups[P_TERMINAL].w/2;
+    popups.popups[P_TERMINAL].y = (SCREEN_HEIGHT/2)-popups.popups[P_TERMINAL].h/2;
+    popups.popups[P_TERMINAL].openedTicks = 0;
     
-    popupHelp.w = 250;
-    popupHelp.h = 400;
-    popupHelp.x = SCREEN_WIDTH-(popupHelp.w+30);
-    popupHelp.y = 60;
-    popupHelp.openedTicks = 0;
+    popups.popups[P_HELP].w = 250;
+    popups.popups[P_HELP].h = 400;
+    popups.popups[P_HELP].x = SCREEN_WIDTH-(popups.popups[P_HELP].w+30);
+    popups.popups[P_HELP].y = 60;
+    popups.popups[P_HELP].openedTicks = 0;
     
-    popupManage.w = 500;
-    popupManage.h = 400;
-    popupManage.x = (SCREEN_WIDTH/2)-popupManage.w/2;
-    popupManage.y = (SCREEN_HEIGHT/2)-popupManage.h/2;
-    popupManage.openedTicks = 0;
+    popups.popups[P_MANAGE].w = 500;
+    popups.popups[P_MANAGE].h = 400;
+    popups.popups[P_MANAGE].x = (SCREEN_WIDTH/2)-popups.popups[P_MANAGE].w/2;
+    popups.popups[P_MANAGE].y = (SCREEN_HEIGHT/2)-popups.popups[P_MANAGE].h/2;
+    popups.popups[P_MANAGE].openedTicks = 0;
     
-    popupBrowser.w = 600;
-    popupBrowser.h = 300;
-    popupBrowser.x = (SCREEN_WIDTH/2)-popupBrowser.w/2;
-    popupBrowser.y = (SCREEN_HEIGHT/2)-popupBrowser.h/2;
-    popupBrowser.openedTicks = 0;
+    popups.popups[P_BROWSER].w = 600;
+    popups.popups[P_BROWSER].h = 300;
+    popups.popups[P_BROWSER].x = (SCREEN_WIDTH/2)-popups.popups[P_BROWSER].w/2;
+    popups.popups[P_BROWSER].y = (SCREEN_HEIGHT/2)-popups.popups[P_BROWSER].h/2;
+    popups.popups[P_BROWSER].openedTicks = 0;
     
     popupShutdown.w = 150;
     popupShutdown.h = 100;
@@ -1200,7 +1078,7 @@ int main(int argc, char* args[])
                             //printf("%d,%d\n", mX, mY);
                             mouseDragX = mX;
                             mouseDragY = mY;
-                            popupFakeDrag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
+                            popups.fakeDrag(draggedPopup, mouseX - mouseDragX, mouseY - mouseDragY);
                         }
                     }
                 }
@@ -1228,7 +1106,7 @@ int main(int argc, char* args[])
                         switch (popups.order[i])
                         {
                             case P_TERMINAL:
-                                terminal.draw(gRenderer, popupTerminal, textTerminal, textTerminalBuffer, currentTicks);
+                                terminal.draw(gRenderer, popups.popups[P_TERMINAL], textTerminal, textTerminalBuffer, currentTicks);
                                 break;
                             case P_MANAGE:
                                 drawManagePopup();
