@@ -15,7 +15,7 @@ Terminal::~Terminal()
     
 };
 
-void Terminal::draw(SDL_Renderer* renderer, Popup& popupTerminal, Text& textTerminal, Text& textTerminalBuffer, unsigned int currentTicks)
+void Terminal::draw(SDL_Renderer* renderer, Popup& popupTerminal, Text& textTerminalBuffer, unsigned int currentTicks)
 {
     if (popupTerminal.draw(renderer, currentTicks))
     {
@@ -27,8 +27,4 @@ void Terminal::draw(SDL_Renderer* renderer, Popup& popupTerminal, Text& textTerm
         textTerminalBuffer.y = popupTerminal.y+30+5;
         textTerminalBuffer.draw(renderer);
     }
-    
-    textTerminal.x = popupTerminal.x+5;
-    textTerminal.y = popupTerminal.y+5;
-    textTerminal.draw(renderer);
 };

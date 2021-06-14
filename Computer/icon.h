@@ -2,9 +2,12 @@
 #define __h_icon
 
 #include "entity.h"
+#include "text.h"
 
 class Icon : Entity
 {
+    private:
+        Text textObj;
     public:
         int x;
         int y;
@@ -12,7 +15,8 @@ class Icon : Entity
         int h;
         Icon();
         ~Icon();
-        void draw(SDL_Renderer* renderer, SDL_Texture* texture);
+        void generate(SDL_Renderer* renderer, TTF_Font* font, std::string text);
+        void draw(SDL_Renderer* renderer, bool selected, char desktopAlpha);
 };
 
 #endif

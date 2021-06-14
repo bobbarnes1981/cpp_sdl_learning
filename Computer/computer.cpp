@@ -12,8 +12,8 @@
 #include "button.h"
 #include "popups.h"
 #include "popup.h"
-#include "icons.h"
 #include "icon.h"
+#include "icons.h"
 #include "notice.h"
 #include "notices.h"
 #include "text.h"
@@ -54,11 +54,6 @@ unsigned int mouseClick1 = -1;
 bool mouseDown3 = false;
 unsigned int mouseClick3 = -1;
 
-int numIcons = 5;
-int iconSize = 60;
-int iconXOffset = 30;
-int iconYOffset = 60;
-
 bool init();
 
 bool loadMedia();
@@ -94,7 +89,7 @@ void boot();
 void addNotice(std::string text, NoticeType type);
 
 Notices notices;
-
+Icons icons;
 Popups popups;
 
 unsigned int startTime = 0;
@@ -120,10 +115,6 @@ Text textLArrow;
 Text textRArrow;
 
 Text textShutdown;
-Text textBrowser;
-Text textTerminal;
-Text textHelp;
-Text textManage;
 
 Terminal terminal;
 Text textTerminalBuffer;
@@ -394,82 +385,6 @@ void drawDesktop()
     SDL_RenderFillRect(gRenderer, &fillRect);
 }
 
-int iconSelected = -1;
-
-void drawIcons()
-{
-    unsigned int iconsToDraw = numIcons;
-    
-    if (currentState == GS_DESKTOP)
-    {
-        if (currentTicks > BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN + DESKTOP_ICON_IN)
-        {
-            Mix_PlayChannel(-1, soundDesktop, 0);
-            currentState = GS_RUN;
-        }
-        else
-        {
-            int iconTime = currentTicks-(BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN);
-            iconsToDraw =  iconTime / (DESKTOP_ICON_IN / numIcons);
-        }
-    }
-    
-    // todo: this needs rewriting
-    for (int i = 0; i < iconsToDraw; i++)
-    {
-        int x = iconXOffset;
-        int y = iconYOffset+(i*(iconSize+30));
-        int w = iconSize;
-        int h = iconSize;
-        SDL_Rect outlineRect = { x, y, w, h };
-        
-        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, desktopAlpha);
-        if (iconSelected == i)
-        {
-            SDL_RenderFillRect(gRenderer, &outlineRect);
-            if (currentTicks - mouseClick1 > ICON_SELECT_TIMEOUT)
-            {
-                iconSelected = -1;
-            }
-        }
-        else
-        {
-            SDL_RenderDrawRect(gRenderer, &outlineRect);
-        }
-        
-        if (i == 0)
-        {
-            textTerminal.x = x;
-            textTerminal.y = y+h+5;
-            textTerminal.draw(gRenderer);
-        }
-        if (i == 1)
-        {
-            textHelp.x = x;
-            textHelp.y = y+h+5;
-            textHelp.draw(gRenderer);
-        }
-        if (i == 2)
-        {
-            textManage.x = x;
-            textManage.y = y+h+5;
-            textManage.draw(gRenderer);
-        }
-        if (i == 3)
-        {
-            textBrowser.x = x;
-            textBrowser.y = y+h+5;
-            textBrowser.draw(gRenderer);
-        }
-        if (i == 4)
-        {
-            textShutdown.x = x;
-            textShutdown.y = y+h+5;
-            textShutdown.draw(gRenderer);
-        }
-    }
-}
-
 void drawShutdownPopup()
 {
     SDL_Rect fillRect = { 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT };
@@ -499,10 +414,6 @@ void drawShutdownPopup()
             shutdownFadeTicks = currentTicks;
         }
     }
-    
-    textShutdown.x = popupShutdown.x+5;
-    textShutdown.y = popupShutdown.y+5;
-    textShutdown.draw(gRenderer);
 }
 
 void drawBrowserPopup()
@@ -511,10 +422,6 @@ void drawBrowserPopup()
     {
         
     }
-    
-    textBrowser.x = popups.popups[P_BROWSER].x+5;
-    textBrowser.y = popups.popups[P_BROWSER].y+5;
-    textBrowser.draw(gRenderer);
 }
 
 void drawShutdownFadeIn()
@@ -581,10 +488,6 @@ void drawManagePopup()
     {
         
     }
-    
-    textManage.x = popups.popups[P_MANAGE].x+5;
-    textManage.y = popups.popups[P_MANAGE].y+5;
-    textManage.draw(gRenderer);
 }
 
 void drawHelpPopup()
@@ -621,10 +524,6 @@ void drawHelpPopup()
             //
         }
     }
-    
-    textHelp.x = popups.popups[P_HELP].x+5;
-    textHelp.y = popups.popups[P_HELP].y+5;
-    textHelp.draw(gRenderer);
 }
 
 void handleKey(SDL_Keycode keycode)
@@ -832,22 +731,22 @@ void handleMouse(unsigned int type, int button)
                             else
                             {
                                 // no popup clicked
-                                for (int i = 0; i < numIcons; i++)
+                                for (int i = 0; i < I_NUMBER_OF_ICONS; i++)
                                 {
-                                    int iconX = iconXOffset;
-                                    int iconY = iconYOffset+(i*(iconSize+30));
-                                    int iconW = iconSize;
-                                    int iconH = iconSize;
+                                    int iconX = icons.xOffset;
+                                    int iconY = icons.yOffset+(i*(ICON_SIZE+30));
+                                    int iconW = ICON_SIZE;
+                                    int iconH = ICON_SIZE;
                                     if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
                                     {
-                                        iconSelected = i;
+                                        icons.selected = i;
                                         break;
                                     }
                                 }
-                                if (iconSelected != -1)
+                                if (icons.selected != -1)
                                 {
                                     // icon clicked
-                                    switch(iconSelected)
+                                    switch(icons.selected)
                                     {
                                         case 0:
                                             if (!popups.exists(P_TERMINAL))
@@ -947,13 +846,13 @@ void generateText()
     
     textShutdown.generate(gRenderer, gFont, black, "Shutdown");
     
-    textBrowser.generate(gRenderer, gFont, black, "Browser");
+    popups.popups[P_BROWSER].generate(gRenderer, gFont, "Browser");
     
-    textTerminal.generate(gRenderer, gFont, black, "Terminal");
+    popups.popups[P_TERMINAL].generate(gRenderer, gFont, "Terminal");
     
-    textHelp.generate(gRenderer, gFont, black, "Help");
+    popups.popups[P_HELP].generate(gRenderer, gFont, "Help");
     
-    textManage.generate(gRenderer, gFont, black, "Manage");
+    popups.popups[P_MANAGE].generate(gRenderer, gFont, "Manage");
 }
 
 void boot()
@@ -1012,7 +911,7 @@ int main(int argc, char* args[])
     
     buttonRArrow.w = 30;
     buttonRArrow.h = 30;
-
+    
     eventFirstNotice.start = currentTicks;
     eventFirstNotice.delay = 5000;
 
@@ -1028,6 +927,12 @@ int main(int argc, char* args[])
         }
         else
         {
+            icons.icons[I_TERMINAL].generate(gRenderer, gFont, "[Terminal]");
+            icons.icons[I_HELP].generate(gRenderer, gFont, "[Help]");
+            icons.icons[I_MANAGE].generate(gRenderer, gFont, "[Manage]");
+            icons.icons[I_BROWSER].generate(gRenderer, gFont, "[Browser]");
+            icons.icons[I_SHUTDOWN].generate(gRenderer, gFont, "[Shutdown]");
+            
             SDL_Event e;
             
             generateText();
@@ -1095,7 +1000,22 @@ int main(int argc, char* args[])
                 // icons drawn on top of desktop
                 if (currentState != GS_BOOT)
                 {
-                    drawIcons();
+                    unsigned int iconsToDraw = I_NUMBER_OF_ICONS;
+                    if (currentState == GS_DESKTOP)
+                    {
+                        if (currentTicks > BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN + DESKTOP_ICON_IN)
+                        {
+                            Mix_PlayChannel(-1, soundDesktop, 0);
+                            currentState = GS_RUN;
+                        }
+                        else
+                        {
+                            int iconTime = currentTicks-(BOOT_FLASH + BOOT_TEXT + DESKTOP_FADE_IN);
+                            iconsToDraw =  iconTime / (DESKTOP_ICON_IN / I_NUMBER_OF_ICONS);
+                        }
+                    }
+                    
+                    icons.draw(gRenderer, iconsToDraw, desktopAlpha, currentTicks - mouseClick1);
                 }
                 
                 // this is a hack
@@ -1106,7 +1026,7 @@ int main(int argc, char* args[])
                         switch (popups.order[i])
                         {
                             case P_TERMINAL:
-                                terminal.draw(gRenderer, popups.popups[P_TERMINAL], textTerminal, textTerminalBuffer, currentTicks);
+                                terminal.draw(gRenderer, popups.popups[P_TERMINAL], textTerminalBuffer, currentTicks);
                                 break;
                             case P_MANAGE:
                                 drawManagePopup();

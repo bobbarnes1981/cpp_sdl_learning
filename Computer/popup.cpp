@@ -14,11 +14,21 @@ Popup::~Popup()
     
 };
 
+void Popup::generate(SDL_Renderer* renderer, TTF_Font* font, std::string text)
+{
+    SDL_Color colour = { 0x00, 0x00, 0x00 };
+    textObj.generate(renderer, font, colour, text);
+};
+
 bool Popup::draw(SDL_Renderer* renderer, unsigned int currentTicks)
 {
     SDL_Rect fillRect = { x, y, w, 30 };
     SDL_SetRenderDrawColor(renderer, 0x0A, 0x8C, 0x61, 0xFF);
     SDL_RenderFillRect(renderer, &fillRect);
+    
+    textObj.x = x+5;
+    textObj.y = y+5;
+    textObj.draw(renderer);
     
     if (currentTicks - openedTicks > POPUP_DELAY)
     {

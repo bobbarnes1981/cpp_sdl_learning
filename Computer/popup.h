@@ -2,11 +2,14 @@
 #define __h_popup
 
 #include "entity.h"
+#include "text.h"
 
 #define POPUP_DELAY 250
 
 class Popup : Entity
 {
+    private:
+        Text textObj;
     public:
         int x;
         int y;
@@ -17,6 +20,7 @@ class Popup : Entity
         unsigned int openedTicks;
         Popup();
         ~Popup();
+        void generate(SDL_Renderer* renderer, TTF_Font* font, std::string text);
         bool draw(SDL_Renderer* renderer, unsigned int currentTicks);
         bool isClicked(int mX, int mY);
         bool isDragged(int mX, int mY);
