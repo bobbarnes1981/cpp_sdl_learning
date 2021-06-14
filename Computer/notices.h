@@ -1,12 +1,9 @@
 #ifndef __h_notices
 #define __h_notices
 
-enum NoticeType
-{
-    NT_NONE,
-    NT_INFO,
-    NT_CRITICAL
-};
+#include "notice.h"
+
+#define MAX_NOTICES 5
 
 class Notices
 {
@@ -14,6 +11,7 @@ class Notices
         int x;
         int y;
         int numNotices;
+        Notice notices[MAX_NOTICES];
         Notices();
         ~Notices();
         void add();

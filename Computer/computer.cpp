@@ -13,6 +13,7 @@
 #include "popups.h"
 #include "popup.h"
 #include "icon.h"
+#include "notice.h"
 #include "notices.h"
 #include "text.h"
 #include "terminal.h"
