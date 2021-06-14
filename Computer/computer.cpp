@@ -126,6 +126,9 @@ Text textBootBuffer;
 int bootLines = 0;
 std::string bootBuffer = "";
 
+Text textHelpPages;
+std::string helpPages = "0x01 db\r0x02 web\r0x04 dns\r0x10 missing\r0x20 fault\r0x40 overload";
+
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
 GameState currentState = GS_BOOT;
@@ -508,6 +511,10 @@ void drawHelpPopup()
         buttonRArrow.x = popups.popups[P_HELP].x + popups.popups[P_HELP].w - (10 + buttonRArrow.w);
         buttonRArrow.y = popups.popups[P_HELP].y + popups.popups[P_HELP].h - (10 + buttonRArrow.h);
         
+        textHelpPages.x = popups.popups[P_HELP].x+10;
+        textHelpPages.y = popups.popups[P_HELP].y+10+30;
+        textHelpPages.draw(gRenderer);
+        
         bool pressed = buttonLArrow.update(mouseDown1, mouseX, mouseY);
         buttonLArrow.draw(gRenderer);
         textLArrow.x = buttonLArrow.x+5;
@@ -647,16 +654,16 @@ void terminalBufferGenerate()
 
 enum ServerErrors
 {
-    SE_NONE = 0,
-    SE_DB_MISSING = 1,
-    SE_DB_FAULT = 2,
-    SE_DB_OVERLOAD = 4,
-    SE_WEB_MISSING = 8,
-    SE_WEB_FAULT = 16,
-    SE_WEB_OVERLOAD = 32,
-    SE_DNS_MISSING = 64,
-    SE_DNS_FAULT = 128,
-    SE_DNS_OVERLOAD = 256
+    SE_NONE         = 0x00,
+    SE_DB_MISSING   = 0x11,
+    SE_DB_FAULT     = 0x21,
+    SE_DB_OVERLOAD  = 0x41,
+    SE_WEB_MISSING  = 0x12,
+    SE_WEB_FAULT    = 0x22,
+    SE_WEB_OVERLOAD = 0x42,
+    SE_DNS_MISSING  = 0x14,
+    SE_DNS_FAULT    = 0x24,
+    SE_DNS_OVERLOAD = 0x44
 };
 int serverError = SE_NONE;
 
@@ -908,6 +915,8 @@ void generateText()
     popups.popups[P_HELP].generate(gRenderer, gFont, "Help");
     
     popups.popups[P_MANAGE].generate(gRenderer, gFont, "Manage");
+    
+    textHelpPages.generateWrapped(gRenderer, gFont, black, helpPages, popups.popups[P_HELP].w-30);
 }
 
 void boot()
