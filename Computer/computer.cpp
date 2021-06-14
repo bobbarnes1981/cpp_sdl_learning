@@ -876,92 +876,95 @@ void handleMouse(unsigned int type, int button)
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
                 
-                context.show = false;
-                int selectedContext = context.clicked(mouseX, mouseY);
-                if (selectedContext != -1)
+                if (currentState == GS_RUN)
                 {
-                    // context clicked
-                    printf("%d\n", selectedContext);
-                }
-                else
-                {
-                    // context not clicked
-                    int selectedNotice =  notices.clicked(mouseX, mouseY);
-                    //printf("%d\n", selectedNotice);
-                    if (selectedNotice != -1)
+                    int selectedContext = context.clicked(mouseX, mouseY);
+                    context.show = false;
+                    if (selectedContext != -1)
                     {
-                        // notice clicked
-                        notices.remove(selectedNotice);
+                        // context clicked
+                        printf("%d\n", selectedContext);
                     }
                     else
                     {
-                        // notice not clicked
-                        PopupType selectedPopup = popupClicked(mouseX, mouseY);
-                        if (selectedPopup != P_NONE)
+                        // context not clicked
+                        int selectedNotice =  notices.clicked(mouseX, mouseY);
+                        //printf("%d\n", selectedNotice);
+                        if (selectedNotice != -1)
                         {
-                            // popup clicked
-                            draggedPopup = popupDragged(mouseX, mouseY);
-                            //printf("%d\n", selectedPopup);
-                            if (selectedPopup != popups.peek())
-                            {
-                                popups.select(selectedPopup);
-                            }
+                            // notice clicked
+                            notices.remove(selectedNotice);
                         }
                         else
                         {
-                            // no popup clicked
-                            for (int i = 0; i < numIcons; i++)
+                            // notice not clicked
+                            PopupType selectedPopup = popupClicked(mouseX, mouseY);
+                            if (selectedPopup != P_NONE)
                             {
-                                int iconX = iconXOffset;
-                                int iconY = iconYOffset+(i*(iconSize+30));
-                                int iconW = iconSize;
-                                int iconH = iconSize;
-                                if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
+                                // popup clicked
+                                draggedPopup = popupDragged(mouseX, mouseY);
+                                //printf("%d\n", selectedPopup);
+                                if (selectedPopup != popups.peek())
                                 {
-                                    iconSelected = i;
-                                    break;
-                                }
-                            }
-                            if (iconSelected != -1)
-                            {
-                                // icon clicked
-                                switch(iconSelected)
-                                {
-                                    case 0:
-                                        if (!popups.exists(P_TERMINAL))
-                                        {
-                                            popups.push(P_TERMINAL);
-                                            popupTerminal.openedTicks = currentTicks;
-                                            
-                                            termBuffer.clear();
-                                            termLines = 0;
-                                            termBuffer.push_back(termPrompt);
-                                            terminalBufferGenerate();
-                                        }
-                                        break;
-                                    case 1:
-                                        if (!popups.exists(P_HELP))
-                                        {
-                                            popups.push(P_HELP);
-                                            popupHelp.openedTicks = currentTicks;
-                                        }
-                                        break;
-                                    case 2:
-                                        if (!popups.exists(P_MANAGE))
-                                        {
-                                            popups.push(P_MANAGE);
-                                            popupManage.openedTicks = currentTicks;
-                                        }
-                                        break;
-                                    case 3:
-                                        currentState = GS_SHUTDOWN_FADE_IN;
-                                        shutdownFadeTicks = currentTicks;
-                                        break;
+                                    popups.select(selectedPopup);
                                 }
                             }
                             else
                             {
-                                // no icon clicked
+                                // no popup clicked
+                                for (int i = 0; i < numIcons; i++)
+                                {
+                                    int iconX = iconXOffset;
+                                    int iconY = iconYOffset+(i*(iconSize+30));
+                                    int iconW = iconSize;
+                                    int iconH = iconSize;
+                                    if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
+                                    {
+                                        iconSelected = i;
+                                        break;
+                                    }
+                                }
+                                if (iconSelected != -1)
+                                {
+                                    // icon clicked
+                                    switch(iconSelected)
+                                    {
+                                        case 0:
+                                            if (!popups.exists(P_TERMINAL))
+                                            {
+                                                popups.push(P_TERMINAL);
+                                                popupTerminal.openedTicks = currentTicks;
+                                                
+                                                termBuffer.clear();
+                                                termLines = 0;
+                                                termBuffer.push_back(termPrompt);
+                                                terminalBufferGenerate();
+                                            }
+                                            break;
+                                        case 1:
+                                            if (!popups.exists(P_HELP))
+                                            {
+                                                popups.push(P_HELP);
+                                                popupHelp.openedTicks = currentTicks;
+                                            }
+                                            break;
+                                        case 2:
+                                            if (!popups.exists(P_MANAGE))
+                                            {
+                                                popups.push(P_MANAGE);
+                                                popupManage.openedTicks = currentTicks;
+                                            }
+                                            break;
+                                        case 3:
+                                            currentState = GS_SHUTDOWN_FADE_IN;
+                                            shutdownFadeTicks = currentTicks;
+                                            break;
+                                    }
+                                }
+                                else
+                                {
+                                    // no icon clicked
+                                }
                             }
                         }
                     }
@@ -972,10 +975,13 @@ void handleMouse(unsigned int type, int button)
                 mouseDown3 = true;
                 mouseClick3 = currentTicks;
                 
-                //TODO: ensure we haven't clicked an icon or popup infront
-                context.show = true;
-                context.x = mouseX;
-                context.y = mouseY;
+                if (currentState == GS_RUN)
+                {
+                    //TODO: ensure we haven't clicked an icon or popup infront of desktop
+                    context.show = true;
+                    context.x = mouseX;
+                    context.y = mouseY;
+                }
             }
             break;
         case SDL_MOUSEBUTTONUP:
