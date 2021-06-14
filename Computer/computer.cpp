@@ -41,8 +41,8 @@ TimedEvent eventServerError;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
 
-const int SCREEN_WIDTH = 1024;
-const int SCREEN_HEIGHT = 768;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
 
 PopupType draggedPopup = P_NONE;
 int mouseX = -1;
@@ -1039,7 +1039,7 @@ int main(int argc, char* args[])
                 {
                     eventServerError.triggered = true;
                     serverError = SE_DB_FAULT; // DATABASE FAULT
-                    addNotice("server error reported", NT_CRITICAL);
+                    addNotice("(!) server error", NT_CRITICAL);
                 }
                 
                 // do this code here for now

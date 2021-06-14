@@ -28,7 +28,7 @@ void Notice::draw(SDL_Renderer* renderer, int x, int y, int w, int h)
     SDL_SetRenderDrawColor(renderer, 0x03, 0x36, 0x25, 0xFF);
     SDL_RenderDrawRect(renderer, &rect);
     
-    textObj.x = x;
-    textObj.y = y;
+    textObj.x = x+5;
+    textObj.y = y+5;
     textObj.draw(renderer);
 };

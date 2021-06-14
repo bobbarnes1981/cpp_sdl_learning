@@ -3,6 +3,8 @@
 
 #include "notices.h"
 
+#define NOTICE_WIDTH 150
+
 Notices::Notices()
 {
     
@@ -52,7 +54,7 @@ void Notices::draw(SDL_Renderer* renderer)
 {
     for (int i = 0; i < numNotices; i++)
     {
-        notices[i].draw(renderer, x - 100 - 5, y - (i*35) - 30 - 5, 100, 30);
+        notices[i].draw(renderer, x - NOTICE_WIDTH - 5, y - (i*35) - 30 - 5, NOTICE_WIDTH, 30);
     }
 };
 
@@ -60,7 +62,7 @@ int Notices::clicked(int mX, int mY)
 {
     for (int i = 0; i < numNotices; i++)
     {
-        if (mX > x - 100 -5 && mX < x - 100 - 5 +100 && mY > y - (i*35) - 30 - 5 && mY < y - (i*35) - 30 - 5 + 30)
+        if (mX > x - NOTICE_WIDTH -5 && mX < x - NOTICE_WIDTH - 5 +100 && mY > y - (i*35) - 30 - 5 && mY < y - (i*35) - 30 - 5 + 30)
         {
             return i;
         }
