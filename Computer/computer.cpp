@@ -12,6 +12,7 @@
 #include "button.h"
 #include "popups.h"
 #include "popup.h"
+#include "icons.h"
 #include "icon.h"
 #include "notice.h"
 #include "notices.h"
@@ -29,6 +30,7 @@ Button buttonRArrow;
 Popup popupShutdown;
 Popup popupTerminal;
 Popup popupHelp;
+Popup popupBrowser;
 Popup popupManage;
 
 Mix_Chunk* soundStartup = NULL;
@@ -43,8 +45,8 @@ TimedEvent eventFirstNotice;
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
 
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 1024;
+const int SCREEN_HEIGHT = 768;
 
 PopupType draggedPopup = P_NONE;
 int mouseX = -1;
@@ -56,7 +58,7 @@ unsigned int mouseClick1 = -1;
 bool mouseDown3 = false;
 unsigned int mouseClick3 = -1;
 
-int numIcons = 4;
+int numIcons = 5;
 int iconSize = 60;
 int iconXOffset = 30;
 int iconYOffset = 60;
@@ -68,7 +70,6 @@ bool loadMedia();
 void close();
 
 void drawBoot();
-
 void drawDesktop();
 
 void drawBootBuffer();
@@ -76,27 +77,20 @@ void drawBootBuffer();
 void drawIcons();
 
 void drawShutdownPopup();
-
 void drawShutdownFadeIn();
-
 void drawShutdownFadeOut();
 
 void handleKey();
-
 void handleKeyPopup(PopupType popup, SDL_Keycode keycode);
-
 void handleMouse(unsigned int type, int button);
 
 void generateText();
 
 void terminalBufferUpdate(SDL_Keycode keycode);
-
 void terminalBufferGenerate();
-
 void terminalBufferProcess();
 
 void bootBufferUpdate(std::string line);
-
 void bootBufferGenerate();
 
 void boot();
@@ -104,7 +98,6 @@ void boot();
 void addNotice(std::string text, NoticeType type);
 
 PopupType popupClicked(int x, int y);
-
 PopupType popupDragged(int x, int y);
 
 Notices notices;
@@ -134,6 +127,7 @@ Text textLArrow;
 Text textRArrow;
 
 Text textShutdown;
+Text textBrowser;
 Text textTerminal;
 Text textHelp;
 Text textManage;
@@ -411,7 +405,7 @@ int iconSelected = -1;
 
 void drawIcons()
 {
-    unsigned int iconsToDraw = 4;
+    unsigned int iconsToDraw = numIcons;
     
     if (currentState == GS_DESKTOP)
     {
@@ -470,6 +464,12 @@ void drawIcons()
         }
         if (i == 3)
         {
+            textBrowser.x = x;
+            textBrowser.y = y+h+5;
+            textBrowser.draw(gRenderer);
+        }
+        if (i == 4)
+        {
             textShutdown.x = x;
             textShutdown.y = y+h+5;
             textShutdown.draw(gRenderer);
@@ -510,6 +510,18 @@ void drawShutdownPopup()
     textShutdown.x = popupShutdown.x+5;
     textShutdown.y = popupShutdown.y+5;
     textShutdown.draw(gRenderer);
+}
+
+void drawBrowserPopup()
+{
+    if (popupBrowser.draw(gRenderer, currentTicks))
+    {
+        
+    }
+    
+    textBrowser.x = popupBrowser.x+5;
+    textBrowser.y = popupBrowser.y+5;
+    textBrowser.draw(gRenderer);
 }
 
 void drawShutdownFadeIn()
@@ -801,6 +813,12 @@ PopupType popupClicked(int x, int y)
                     return P_TERMINAL;
                 }
                 break;
+            case P_BROWSER:
+                if (popupBrowser.isClicked(x, y))
+                {
+                    return P_BROWSER;
+                }
+                break;
         }
     }
     
@@ -831,6 +849,12 @@ PopupType popupDragged(int x, int y)
                     return P_TERMINAL;
                 }
                 break;
+            case P_BROWSER:
+                if (popupBrowser.isDragged(x, y))
+                {
+                    return P_BROWSER;
+                }
+                break;
         }
     }
     
@@ -854,6 +878,10 @@ void popupDrag(PopupType popup, int x, int y)
             popupTerminal.drag(x, y);
             popupTerminal.openedTicks = currentTicks;
             break;
+        case P_BROWSER:
+            popupBrowser.drag(x, y);
+            popupBrowser.openedTicks = currentTicks;
+            break;
     }
 }
 
@@ -869,6 +897,9 @@ void popupFakeDrag(PopupType popup, int x, int y)
             break;
         case P_TERMINAL:
             popupTerminal.fakeDrag(x, y);
+            break;
+        case P_BROWSER:
+            popupBrowser.fakeDrag(x, y);
             break;
     }
 }
@@ -967,6 +998,13 @@ void handleMouse(unsigned int type, int button)
                                             }
                                             break;
                                         case 3:
+                                            if (!popups.exists(P_BROWSER))
+                                            {
+                                                popups.push(P_BROWSER);
+                                                popupBrowser.openedTicks = currentTicks;
+                                            }
+                                            break;
+                                        case 4:
                                             currentState = GS_SHUTDOWN_FADE_IN;
                                             shutdownFadeTicks = currentTicks;
                                             break;
@@ -1031,6 +1069,8 @@ void generateText()
     
     textShutdown.generate(gRenderer, gFont, black, "Shutdown");
     
+    textBrowser.generate(gRenderer, gFont, black, "Browser");
+    
     textTerminal.generate(gRenderer, gFont, black, "Terminal");
     
     textHelp.generate(gRenderer, gFont, black, "Help");
@@ -1057,8 +1097,8 @@ int main(int argc, char* args[])
     
     popupHelp.w = 250;
     popupHelp.h = 400;
-    popupHelp.x = (SCREEN_WIDTH/4*3)-popupHelp.w/2;
-    popupHelp.y = (SCREEN_HEIGHT/2)-popupHelp.h/2;
+    popupHelp.x = SCREEN_WIDTH-(popupHelp.w+30);
+    popupHelp.y = 60;
     popupHelp.openedTicks = 0;
     
     popupManage.w = 500;
@@ -1066,6 +1106,12 @@ int main(int argc, char* args[])
     popupManage.x = (SCREEN_WIDTH/2)-popupManage.w/2;
     popupManage.y = (SCREEN_HEIGHT/2)-popupManage.h/2;
     popupManage.openedTicks = 0;
+    
+    popupBrowser.w = 600;
+    popupBrowser.h = 300;
+    popupBrowser.x = (SCREEN_WIDTH/2)-popupBrowser.w/2;
+    popupBrowser.y = (SCREEN_HEIGHT/2)-popupBrowser.h/2;
+    popupBrowser.openedTicks = 0;
     
     popupShutdown.w = 150;
     popupShutdown.h = 100;
@@ -1189,6 +1235,9 @@ int main(int argc, char* args[])
                                 break;
                             case P_HELP:
                                 drawHelpPopup();
+                                break;
+                            case P_BROWSER:
+                                drawBrowserPopup();
                                 break;
                         }
                     }

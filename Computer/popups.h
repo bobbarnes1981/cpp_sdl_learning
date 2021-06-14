@@ -7,6 +7,7 @@ enum PopupType
     P_TERMINAL,
     P_MANAGE,
     P_HELP,
+    P_BROWSER,
     P_NUMBER_OF_POPUPS
 };
 
