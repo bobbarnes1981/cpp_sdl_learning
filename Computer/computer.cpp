@@ -414,6 +414,10 @@ void drawShutdownPopup()
             shutdownFadeTicks = currentTicks;
         }
     }
+    
+    textShutdown.x = popupShutdown.x+5;
+    textShutdown.y = popupShutdown.y+5;
+    textShutdown.draw(gRenderer);
 }
 
 void drawBrowserPopup()
