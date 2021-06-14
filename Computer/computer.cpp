@@ -127,7 +127,16 @@ int bootLines = 0;
 std::string bootBuffer = "";
 
 Text textHelpPages;
-std::string helpPages = "0x01 db\r0x02 web\r0x04 dns\r0x10 missing\r0x20 fault\r0x40 overload";
+std::string helpPages[] =
+{
+    "Page 1\r----------------\r> server\r",
+    "Page 2\r----------------\r> db\r",
+    "Page 3\r----------------\r> web\r",
+    "Page 4\r----------------\r> dns\r",
+    "Page 5\r----------------\r> errors\r 0x01 db\r 0x02 web\r 0x04 dns\r 0x10 missing\r 0x20 fault\r 0x40 overload\r",
+};
+int totalHelpPages = 5;
+int selectedHelpPage = 0;
 
 unsigned int currentTicks = 0;
 unsigned int lastTicks = 0;
@@ -522,7 +531,13 @@ void drawHelpPopup()
         textLArrow.draw(gRenderer);
         if (pressed)
         {
-            //
+            selectedHelpPage--;
+            if (selectedHelpPage < 0)
+            {
+                selectedHelpPage = totalHelpPages - 1;
+            }
+            SDL_Color black = { 0x00, 0x00, 0x00 };
+            textHelpPages.generateWrapped(gRenderer, gFont, black, helpPages[selectedHelpPage], popups.popups[P_HELP].w-30);
         }
         
         pressed = buttonRArrow.update(mouseDown1, mouseX, mouseY);
@@ -532,7 +547,13 @@ void drawHelpPopup()
         textRArrow.draw(gRenderer);
         if (pressed)
         {
-            //
+            selectedHelpPage++;
+            if (selectedHelpPage >= totalHelpPages)
+            {
+                selectedHelpPage = 0;
+            }
+            SDL_Color black = { 0x00, 0x00, 0x00 };
+            textHelpPages.generateWrapped(gRenderer, gFont, black, helpPages[selectedHelpPage], popups.popups[P_HELP].w-30);
         }
     }
 }
@@ -680,11 +701,8 @@ void terminalBufferProcess()
     else if (command.compare("help") == 0)
     {
         termBuffer.append(" server\r");
-        termBuffer.append(" db\r");
-        termBuffer.append(" web\r");
-        termBuffer.append(" dns\r");
         termBuffer.append(" quit\r");
-        termLines+=5;
+        termLines+=2;
     }
     else if (command.compare("notice") == 0)
     {
@@ -700,25 +718,13 @@ void terminalBufferProcess()
     else if (command.compare("server") == 0)
     {
         termBuffer.append(" check\r");
-        termBuffer.append(" reset\r");
-        termBuffer.append(" stop\r");
-        termBuffer.append(" start\r");
-        termLines+=4;
+        termLines+=1;
     }
     else if (command.compare("server check") == 0)
     {
         termBuffer.append(std::to_string(serverError));
         termBuffer.append("\r");
         termLines+=1;
-    }
-    else if (command.compare("db") == 0)
-    {
-        termBuffer.append(" check\r");
-        termBuffer.append(" reset\r");
-        termBuffer.append(" stop\r");
-        termBuffer.append(" start\r");
-        termBuffer.append(" restore\r");
-        termLines+=5;
     }
     else if (command.compare("db reset") == 0)
     {
@@ -916,7 +922,7 @@ void generateText()
     
     popups.popups[P_MANAGE].generate(gRenderer, gFont, "Manage");
     
-    textHelpPages.generateWrapped(gRenderer, gFont, black, helpPages, popups.popups[P_HELP].w-30);
+    textHelpPages.generateWrapped(gRenderer, gFont, black, helpPages[selectedHelpPage], popups.popups[P_HELP].w-30);
 }
 
 void boot()
