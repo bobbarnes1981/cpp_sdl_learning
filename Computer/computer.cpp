@@ -36,7 +36,7 @@ Mix_Chunk* soundError = NULL;
 Mix_Chunk* soundPopupRemove = NULL;
 Mix_Chunk* soundDesktop = NULL;
 
-TimedEvent eventFirstNotice;
+TimedEvent eventServerError;
 
 const int SCREEN_FPS = 60;
 const int SCREEN_TICKS_PER_FRAME = 1000 / SCREEN_FPS;
@@ -645,6 +645,21 @@ void terminalBufferGenerate()
     textTerminalBuffer.generateWrapped(gRenderer, gFont, green, termBuffer.c_str(), popups.popups[P_TERMINAL].w-(5*2));
 }
 
+enum ServerErrors
+{
+    SE_NONE = 0,
+    SE_DB_MISSING = 1,
+    SE_DB_FAULT = 2,
+    SE_DB_OVERLOAD = 4,
+    SE_WEB_MISSING = 8,
+    SE_WEB_FAULT = 16,
+    SE_WEB_OVERLOAD = 32,
+    SE_DNS_MISSING = 64,
+    SE_DNS_FAULT = 128,
+    SE_DNS_OVERLOAD = 256
+};
+int serverError = SE_NONE;
+
 void terminalBufferProcess()
 {
     std::size_t loc = termBuffer.rfind('\r', termBuffer.length()-2);
@@ -657,8 +672,12 @@ void terminalBufferProcess()
     }
     else if (command.compare("help") == 0)
     {
+        termBuffer.append(" server\r");
+        termBuffer.append(" db\r");
+        termBuffer.append(" web\r");
+        termBuffer.append(" dns\r");
         termBuffer.append(" quit\r");
-        termLines+=1;
+        termLines+=5;
     }
     else if (command.compare("notice") == 0)
     {
@@ -670,6 +689,38 @@ void terminalBufferProcess()
     {
         popups.clear();
         boot();
+    }
+    else if (command.compare("server") == 0)
+    {
+        termBuffer.append(" check\r");
+        termBuffer.append(" reset\r");
+        termBuffer.append(" stop\r");
+        termBuffer.append(" start\r");
+        termLines+=4;
+    }
+    else if (command.compare("server check") == 0)
+    {
+        termBuffer.append(std::to_string(serverError));
+        termBuffer.append("\r");
+        termLines+=1;
+    }
+    else if (command.compare("db") == 0)
+    {
+        termBuffer.append(" check\r");
+        termBuffer.append(" reset\r");
+        termBuffer.append(" stop\r");
+        termBuffer.append(" start\r");
+        termBuffer.append(" restore\r");
+        termLines+=5;
+    }
+    else if (command.compare("db reset") == 0)
+    {
+        termBuffer.append("ok\r");
+        if (serverError == SE_DB_FAULT)
+        {
+            serverError = SE_NONE;
+        }
+        termLines+=1;
     }
     else
     {
@@ -916,8 +967,8 @@ int main(int argc, char* args[])
     buttonRArrow.w = 30;
     buttonRArrow.h = 30;
     
-    eventFirstNotice.start = currentTicks;
-    eventFirstNotice.delay = 5000;
+    eventServerError.start = currentTicks;
+    eventServerError.delay = 5000;
 
     if (!init())
     {
@@ -969,10 +1020,11 @@ int main(int argc, char* args[])
                 }
                 
                 // timed events
-                if (!eventFirstNotice.triggered && eventFirstNotice.delay > currentTicks - eventFirstNotice.delay)
+                if (!eventServerError.triggered && eventServerError.delay > currentTicks - eventServerError.delay)
                 {
-                    eventFirstNotice.triggered = true;
-                    addNotice("welcome", NT_INFO);
+                    eventServerError.triggered = true;
+                    serverError = SE_DB_FAULT; // DATABASE FAULT
+                    addNotice("server error reported", NT_CRITICAL);
                 }
                 
                 // do this code here for now
