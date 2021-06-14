@@ -4,12 +4,15 @@
 class Notices
 {
     public:
+        int x;
+        int y;
         int numNotices;
         Notices();
         ~Notices();
         void add();
-        void remove();
-        void draw(SDL_Renderer* renderer, int x, int y);
+        void remove(int notice);
+        void draw(SDL_Renderer* renderer);
+        int clicked(int mX, int mY);
 };
 
 #endif

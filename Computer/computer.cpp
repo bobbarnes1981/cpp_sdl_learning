@@ -7,6 +7,7 @@
 #include <cmath>
 
 #include "computer.h"
+#include "context.h"
 #include "entity.h"
 #include "button.h"
 #include "popups.h"
@@ -15,6 +16,8 @@
 #include "notices.h"
 #include "text.h"
 #include "terminal.h"
+
+Context context;
 
 Button buttonOK;
 Button buttonCancel;
@@ -93,8 +96,6 @@ void bootBufferUpdate(std::string line);
 void bootBufferGenerate();
 
 void boot();
-
-void drawContextMenu();
 
 PopupType popupClicked(int x, int y);
 
@@ -213,49 +214,49 @@ bool loadMedia()
 {
     bool success = true;
 
-    gFont = TTF_OpenFont("FiraCode-Regular.ttf", 14);
+    gFont = TTF_OpenFont("font/FiraCode-Regular.ttf", 14);
     if (gFont == NULL)
     {
         printf("Failed to load font! SDL_ttf Error: %s\n", TTF_GetError());
         success = false;
     }
 
-    soundStartup = Mix_LoadWAV("startup.wav" );
+    soundStartup = Mix_LoadWAV("sound/startup.wav" );
     if (soundStartup == NULL )
     {
         printf("Failed to load startup sound effect! SDL_mixer Error: %s\n", Mix_GetError());
         success = false;
     }
 
-    soundShutdown = Mix_LoadWAV("shutdown.wav" );
+    soundShutdown = Mix_LoadWAV("sound/shutdown.wav" );
     if (soundShutdown == NULL )
     {
         printf("Failed to load shutdown sound effect! SDL_mixer Error: %s\n", Mix_GetError());
         success = false;
     }
 
-    soundNotice = Mix_LoadWAV("notice.wav" );
+    soundNotice = Mix_LoadWAV("sound/notice.wav" );
     if (soundNotice == NULL )
     {
         printf("Failed to load notice sound effect! SDL_mixer Error: %s\n", Mix_GetError());
         success = false;
     }
 
-    soundError = Mix_LoadWAV("error.wav" );
+    soundError = Mix_LoadWAV("sound/error.wav" );
     if (soundError == NULL )
     {
         printf("Failed to load error sound effect! SDL_mixer Error: %s\n", Mix_GetError());
         success = false;
     }
     
-    soundPopupRemove = Mix_LoadWAV("popup_remove.wav" );
+    soundPopupRemove = Mix_LoadWAV("sound/popup_remove.wav" );
     if (soundPopupRemove == NULL )
     {
         printf("Failed to load popup_remove sound effect! SDL_mixer Error: %s\n", Mix_GetError());
         success = false;
     }
     
-    soundDesktop = Mix_LoadWAV("desktop.wav" );
+    soundDesktop = Mix_LoadWAV("sound/desktop.wav" );
     if (soundDesktop == NULL )
     {
         printf("Failed to load desktop sound effect! SDL_mixer Error: %s\n", Mix_GetError());
@@ -556,50 +557,6 @@ void drawShutdownFadeOut()
     }
 }
 
-bool showContext = false;
-int contextX;
-int contextY;
-
-void drawContextMenu()
-{
-    int timeToShow = 500;
-    int numItems = 4;
-    int itemWidth = 80;
-    int itemHeight = 30;
-    
-    SDL_Rect fillRect = { contextX, contextY, 15, (itemHeight*numItems)+1 };
-    SDL_SetRenderDrawColor(gRenderer, 0x0A, 0x8C, 0x61, 0xFF);
-    SDL_RenderFillRect(gRenderer, &fillRect);
-    
-    int itemTime = currentTicks - mouseClick3;
-    int itemsToDraw =  itemTime / (timeToShow / numItems);
-    if (itemsToDraw > numItems)
-    {
-        itemsToDraw = numItems;
-    }
-    int mX, mY;
-    SDL_GetMouseState(&mX, &mY);
-    for (int i = 0; i < itemsToDraw; i++)
-    {
-        int x = contextX + 15;
-        int y = contextY + (i*itemHeight);
-        SDL_Rect rect = { x, y, itemWidth, itemHeight + 1 };
-        if (mX > x && mX < x + itemWidth && mY > y && mY < y + itemHeight)
-        {
-            SDL_SetRenderDrawColor(gRenderer, 0x03, 0x46, 0x25, 0xFF);
-            SDL_RenderFillRect(gRenderer, &rect);
-        }
-        else
-        {
-            SDL_SetRenderDrawColor(gRenderer, 0x03, 0xFC, 0xA9, 0xFF);
-            SDL_RenderFillRect(gRenderer, &rect);
-        }
-        
-        SDL_SetRenderDrawColor(gRenderer, 0x03, 0x36, 0x25, 0xFF);
-        SDL_RenderDrawRect(gRenderer, &rect);
-    }
-}
-
 void drawBootBuffer()
 {
     textBootBuffer.x = 10;
@@ -669,9 +626,9 @@ void handleKey(SDL_Keycode keycode)
             alphaOverride = !alphaOverride;
             break;
         case SDLK_ESCAPE:
-            if (showContext)
+            if (context.show)
             {
-                showContext = false;
+                context.show = false;
             }
             else
             {
@@ -919,76 +876,94 @@ void handleMouse(unsigned int type, int button)
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
                 
-                // TODO: just always hide it for now, fix this later
-                showContext = false;
-                
-                //TODO: check for notice clicked, if so don't check for popup clicked/dragged
-                PopupType selectedPopup = popupClicked(mouseX, mouseY);
-                if (selectedPopup != P_NONE)
+                context.show = false;
+                int selectedContext = context.clicked(mouseX, mouseY);
+                if (selectedContext != -1)
                 {
-                    // popup clicked
-                    draggedPopup = popupDragged(mouseX, mouseY);
-                    //printf("%d\n", selectedPopup);
-                    if (selectedPopup != popups.peek())
-                    {
-                        popups.select(selectedPopup);
-                    }
+                    // context clicked
+                    printf("%d\n", selectedContext);
                 }
                 else
                 {
-                    // no popup clicked
-                    for (int i = 0; i < numIcons; i++)
+                    // context not clicked
+                    int selectedNotice =  notices.clicked(mouseX, mouseY);
+                    //printf("%d\n", selectedNotice);
+                    if (selectedNotice != -1)
                     {
-                        int iconX = iconXOffset;
-                        int iconY = iconYOffset+(i*(iconSize+30));
-                        int iconW = iconSize;
-                        int iconH = iconSize;
-                        if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
-                        {
-                            iconSelected = i;
-                            break;
-                        }
-                    }
-                    if (iconSelected != -1)
-                    {
-                        // icon clicked
-                        switch(iconSelected)
-                        {
-                            case 0:
-                                if (!popups.exists(P_TERMINAL))
-                                {
-                                    popups.push(P_TERMINAL);
-                                    popupTerminal.openedTicks = currentTicks;
-                                    
-                                    termBuffer.clear();
-                                    termLines = 0;
-                                    termBuffer.push_back(termPrompt);
-                                    terminalBufferGenerate();
-                                }
-                                break;
-                            case 1:
-                                if (!popups.exists(P_HELP))
-                                {
-                                    popups.push(P_HELP);
-                                    popupHelp.openedTicks = currentTicks;
-                                }
-                                break;
-                            case 2:
-                                if (!popups.exists(P_MANAGE))
-                                {
-                                    popups.push(P_MANAGE);
-                                    popupManage.openedTicks = currentTicks;
-                                }
-                                break;
-                            case 3:
-                                currentState = GS_SHUTDOWN_FADE_IN;
-                                shutdownFadeTicks = currentTicks;
-                                break;
-                        }
+                        // notice clicked
+                        notices.remove(selectedNotice);
                     }
                     else
                     {
-                        // no icon clicked
+                        // notice not clicked
+                        PopupType selectedPopup = popupClicked(mouseX, mouseY);
+                        if (selectedPopup != P_NONE)
+                        {
+                            // popup clicked
+                            draggedPopup = popupDragged(mouseX, mouseY);
+                            //printf("%d\n", selectedPopup);
+                            if (selectedPopup != popups.peek())
+                            {
+                                popups.select(selectedPopup);
+                            }
+                        }
+                        else
+                        {
+                            // no popup clicked
+                            for (int i = 0; i < numIcons; i++)
+                            {
+                                int iconX = iconXOffset;
+                                int iconY = iconYOffset+(i*(iconSize+30));
+                                int iconW = iconSize;
+                                int iconH = iconSize;
+                                if (mouseDown1 && mouseX > iconX && mouseX < iconX + iconW && mouseY > iconY && mouseY < iconY + iconH)
+                                {
+                                    iconSelected = i;
+                                    break;
+                                }
+                            }
+                            if (iconSelected != -1)
+                            {
+                                // icon clicked
+                                switch(iconSelected)
+                                {
+                                    case 0:
+                                        if (!popups.exists(P_TERMINAL))
+                                        {
+                                            popups.push(P_TERMINAL);
+                                            popupTerminal.openedTicks = currentTicks;
+                                            
+                                            termBuffer.clear();
+                                            termLines = 0;
+                                            termBuffer.push_back(termPrompt);
+                                            terminalBufferGenerate();
+                                        }
+                                        break;
+                                    case 1:
+                                        if (!popups.exists(P_HELP))
+                                        {
+                                            popups.push(P_HELP);
+                                            popupHelp.openedTicks = currentTicks;
+                                        }
+                                        break;
+                                    case 2:
+                                        if (!popups.exists(P_MANAGE))
+                                        {
+                                            popups.push(P_MANAGE);
+                                            popupManage.openedTicks = currentTicks;
+                                        }
+                                        break;
+                                    case 3:
+                                        currentState = GS_SHUTDOWN_FADE_IN;
+                                        shutdownFadeTicks = currentTicks;
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                // no icon clicked
+                            }
+                        }
                     }
                 }
             }
@@ -998,9 +973,9 @@ void handleMouse(unsigned int type, int button)
                 mouseClick3 = currentTicks;
                 
                 //TODO: ensure we haven't clicked an icon or popup infront
-                showContext = true;
-                contextX = mouseX;
-                contextY = mouseY;
+                context.show = true;
+                context.x = mouseX;
+                context.y = mouseY;
             }
             break;
         case SDL_MOUSEBUTTONUP:
@@ -1188,11 +1163,13 @@ int main(int argc, char* args[])
                     }
                 }
                 
-                notices.draw(gRenderer, SCREEN_WIDTH, SCREEN_HEIGHT);
+                notices.x = SCREEN_WIDTH;
+                notices.y = SCREEN_HEIGHT;
+                notices.draw(gRenderer);
                 
-                if (showContext)
+                if (context.show)
                 {
-                    drawContextMenu();
+                    context.draw(gRenderer, currentTicks - mouseClick3);
                 }
                 
                 // shutdown drawn last, on top of everything else
