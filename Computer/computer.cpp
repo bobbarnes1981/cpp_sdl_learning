@@ -1174,32 +1174,36 @@ int main(int argc, char* args[])
                     drawIcons();
                 }
                 
-                for (int i = P_NUMBER_OF_POPUPS; i > -1; i--)
+                // this is a hack
+                if (desktopAlpha != 0x00 )
                 {
-                    switch (popups.order[i])
+                    for (int i = P_NUMBER_OF_POPUPS; i > -1; i--)
                     {
-                        case P_TERMINAL:
-                            terminal.draw(gRenderer, popupTerminal, textTerminal, textTerminalBuffer, currentTicks);
-                            break;
-                        case P_MANAGE:
-                            drawManagePopup();
-                            break;
-                        case P_HELP:
-                            drawHelpPopup();
-                            break;
+                        switch (popups.order[i])
+                        {
+                            case P_TERMINAL:
+                                terminal.draw(gRenderer, popupTerminal, textTerminal, textTerminalBuffer, currentTicks);
+                                break;
+                            case P_MANAGE:
+                                drawManagePopup();
+                                break;
+                            case P_HELP:
+                                drawHelpPopup();
+                                break;
+                        }
                     }
-                }
-                
-                if (currentState != GS_BOOT)
-                {
-                    notices.x = SCREEN_WIDTH;
-                    notices.y = SCREEN_HEIGHT;
-                    notices.draw(gRenderer);
-                }
-                
-                if (context.show)
-                {
-                    context.draw(gRenderer, currentTicks - mouseClick3);
+                    
+                    if (currentState != GS_BOOT)
+                    {
+                        notices.x = SCREEN_WIDTH;
+                        notices.y = SCREEN_HEIGHT;
+                        notices.draw(gRenderer);
+                    }
+                    
+                    if (context.show)
+                    {
+                        context.draw(gRenderer, currentTicks - mouseClick3);
+                    }
                 }
                 
                 // shutdown drawn last, on top of everything else
