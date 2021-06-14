@@ -774,7 +774,7 @@ void terminalBufferProcess()
 void addNotice(std::string text, NoticeType type)
 {
     Mix_PlayChannel(-1, soundNotice, 0);
-    notices.add();
+    notices.add(gRenderer, gFont, text, type);
 }
 
 PopupType popupClicked(int x, int y)
@@ -904,7 +904,7 @@ void handleMouse(unsigned int type, int button)
                         if (selectedNotice != -1)
                         {
                             // notice clicked
-                            notices.remove(selectedNotice);
+                            notices.remove(gRenderer, gFont, selectedNotice);
                         }
                         else
                         {
@@ -1190,9 +1190,12 @@ int main(int argc, char* args[])
                     }
                 }
                 
-                notices.x = SCREEN_WIDTH;
-                notices.y = SCREEN_HEIGHT;
-                notices.draw(gRenderer);
+                if (currentState != GS_BOOT)
+                {
+                    notices.x = SCREEN_WIDTH;
+                    notices.y = SCREEN_HEIGHT;
+                    notices.draw(gRenderer);
+                }
                 
                 if (context.show)
                 {

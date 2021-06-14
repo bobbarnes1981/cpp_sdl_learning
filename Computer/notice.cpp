@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "notice.h"
 
@@ -12,6 +13,12 @@ Notice::~Notice()
     
 };
 
+void Notice::generate(SDL_Renderer* renderer, TTF_Font* font)
+{
+    SDL_Color colour = { 0x00, 0x00, 0x00 };
+    textObj.generate(renderer, font, colour, text);
+};
+
 void Notice::draw(SDL_Renderer* renderer, int x, int y, int w, int h)
 {
     SDL_Rect rect = { x, y, w, h };
@@ -20,4 +27,8 @@ void Notice::draw(SDL_Renderer* renderer, int x, int y, int w, int h)
     
     SDL_SetRenderDrawColor(renderer, 0x03, 0x36, 0x25, 0xFF);
     SDL_RenderDrawRect(renderer, &rect);
+    
+    textObj.x = x;
+    textObj.y = y;
+    textObj.draw(renderer);
 };

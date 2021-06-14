@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_ttf.h>
 
 #include "notices.h"
 
@@ -12,18 +13,35 @@ Notices::~Notices()
     
 };
 
-void Notices::add()
+void Notices::add(SDL_Renderer* renderer, TTF_Font* font, std::string text, NoticeType type)
 {
-    // not implemented
+    for (int i = MAX_NOTICES - 2; i >-1; i--)
+    {
+        notices[i+1].text = notices[i].text;
+        notices[i+1].type = notices[i].type;
+        notices[i+1].generate(renderer, font);
+    }
+    
+    notices[0].text = text;
+    notices[0].type = type;
+    notices[0].generate(renderer, font);
+
     if (numNotices < MAX_NOTICES)
     {
         numNotices++;
     }
+    
 };
 
-void Notices::remove(int notice)
+void Notices::remove(SDL_Renderer* renderer, TTF_Font* font, int notice)
 {
-    // not implemented
+    for (int i = notice; i < MAX_NOTICES - 1; i++)
+    {
+        notices[i].text = notices[i+1].text;
+        notices[i].type = notices[i+1].type;
+        notices[i].generate(renderer, font);
+    }
+    
     if (numNotices > 0)
     {
         numNotices--;

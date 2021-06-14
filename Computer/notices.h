@@ -14,8 +14,8 @@ class Notices
         Notice notices[MAX_NOTICES];
         Notices();
         ~Notices();
-        void add();
-        void remove(int notice);
+        void add(SDL_Renderer* renderer, TTF_Font* font, std::string text, NoticeType type);
+        void remove(SDL_Renderer* renderer, TTF_Font* font, int notice);
         void draw(SDL_Renderer* renderer);
         int clicked(int mX, int mY);
 };
