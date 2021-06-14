@@ -54,13 +54,16 @@ void Context::draw(SDL_Renderer* renderer, unsigned int elapsedTicks)
 
 int Context::clicked(int mX, int mY)
 {
-    for (int i = 0; i < numItems; i++)
+    if (show)
     {
-        int x_ = x + 15;
-        int y_ = y + (i*itemHeight);
-        if (mX > x_ && mX < x_ + itemWidth && mY > y_ && mY < y_ + itemHeight)
+        for (int i = 0; i < numItems; i++)
         {
-            return i;
+            int x_ = x + 15;
+            int y_ = y + (i*itemHeight);
+            if (mX > x_ && mX < x_ + itemWidth && mY > y_ && mY < y_ + itemHeight)
+            {
+                return i;
+            }
         }
     }
     
