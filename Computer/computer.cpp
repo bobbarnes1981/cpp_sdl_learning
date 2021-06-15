@@ -1141,6 +1141,7 @@ int main(int argc, char* args[])
                 SDL_RenderPresent(gRenderer);
                 
                 unsigned int ticks = currentTicks - lastTicks;
+                lastTicks = currentTicks;
                 if (ticks < SCREEN_TICKS_PER_FRAME)
                 {
                     SDL_Delay(SCREEN_TICKS_PER_FRAME - ticks);
