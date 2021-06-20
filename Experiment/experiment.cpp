@@ -6,7 +6,7 @@
 #include <string>
 #include <cmath>
 
-#include "platform.h"
+#include "experiment.h"
 
 Mix_Chunk* soundTest = NULL;
 
@@ -44,6 +44,9 @@ unsigned int mouseClick3 = 0;
 int mouseX;
 int mouseY;
 
+int startX = -1;
+int startY = -1;
+
 bool quit = false;
 
 bool init()
@@ -62,7 +65,7 @@ bool init()
             printf("Warning: Linear texture filtering not enabled!");
         }
         
-        gWindow = SDL_CreateWindow( "Platform", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
+        gWindow = SDL_CreateWindow( "Experiment", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN );
         if(gWindow == NULL)
         {
             printf("Window could not be initialised! SDL_Error: %s\n", SDL_GetError());
@@ -173,10 +176,6 @@ SDL_Texture* loadTexture(std::string path)
     return newTexture;
 }
 
-int playerX = 0;
-int playerY = 0;
-double playerSpeed = 200;
-
 void handleKey(SDL_Keycode keycode)
 {
     switch (keycode)
@@ -184,19 +183,19 @@ void handleKey(SDL_Keycode keycode)
         case SDLK_ESCAPE:
             quit = true;
             break;
-        case SDLK_w:
-            playerY -= (playerSpeed * elapsedTicks / 100.0);
-            break;
-        case SDLK_a:
-            playerX -= (playerSpeed * elapsedTicks / 100.0);
-            break;
-        case SDLK_s:
-            playerY += (playerSpeed * elapsedTicks / 100.0);
-            break;
-        case SDLK_d:
-            playerX += (playerSpeed * elapsedTicks / 100.0);
-            break;
     }
+}
+
+void startDrag()
+{
+    startX = mouseX;
+    startY = mouseY;
+}
+
+void stopDrag()
+{
+    startX = -1;
+    startY = -1;
 }
 
 void handleMouse(unsigned int type, int button)
@@ -212,6 +211,8 @@ void handleMouse(unsigned int type, int button)
             {
                 mouseDown1 = true;
                 mouseClick1 = currentTicks;
+                
+                startDrag();
             }
             if (button == 3)
             {
@@ -223,6 +224,8 @@ void handleMouse(unsigned int type, int button)
             if (button == 1)
             {
                 mouseDown1 = false;
+                
+                stopDrag();
             }
             if (button == 3)
             {
@@ -278,10 +281,15 @@ int main(int argc, char* args[])
                 SDL_SetRenderDrawColor(gRenderer, 0x00, 0x00, 0x00, 0xFF);
                 SDL_RenderClear(gRenderer);
                 
-                
-                SDL_Rect fillRect = { playerX, playerY, 32, 32 };
-                SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
-                SDL_RenderFillRect(gRenderer, &fillRect);
+                if (startX != -1 && startY != -1)
+                {
+                    int _x, _y;
+                    SDL_GetMouseState(&_x, &_y);
+                    
+                    SDL_Rect rect = { startX, startY, _x - startX, _y - startY };
+                    SDL_SetRenderDrawColor(gRenderer, 0xFF, 0xFF, 0xFF, 0xFF);
+                    SDL_RenderDrawRect(gRenderer, &rect);
+                }
                 
                 SDL_RenderPresent(gRenderer);
                 
