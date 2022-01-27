@@ -701,8 +701,28 @@ void terminalBufferProcess()
     else if (command.compare("help") == 0)
     {
         termBuffer.append(" server\r");
+        termBuffer.append(" db\r");
         termBuffer.append(" quit\r");
-        termLines+=2;
+        termLines+=3;
+    }
+    else if (command.compare("help server") == 0)
+    {
+        termBuffer.append("control server\r");
+        termBuffer.append(" server check\r");
+        termBuffer.append("  check the status code of the server\r");
+        termLines+=3;
+    }
+    else if (command.compare("help db") == 0)
+    {
+        termBuffer.append("control db\r");
+        termBuffer.append(" db reset\r");
+        termBuffer.append("  reset the database service\r");
+        termLines+=3;
+    }
+    else if (command.compare("help quit") == 0)
+    {
+        termBuffer.append("quit the terminal\r");
+        termLines+=1;
     }
     else if (command.compare("notice") == 0)
     {
