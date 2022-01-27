@@ -726,6 +726,11 @@ void terminalBufferProcess()
         termBuffer.append("\r");
         termLines+=1;
     }
+    else if (command.compare("db") == 0)
+    {
+        termBuffer.append(" reset\r");
+        termLines+=1;
+    }
     else if (command.compare("db reset") == 0)
     {
         termBuffer.append("ok\r");
